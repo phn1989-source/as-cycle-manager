@@ -468,55 +468,93 @@ body{font-family:'Malgun Gothic','맑은 고딕','Segoe UI',sans-serif;backgroun
 
 <!-- ===== REGISTER MODAL ===== -->
 <div class="modal-overlay" id="regModal">
-  <div class="modal" style="max-width:640px;">
-    <div class="modal-head"><h2>신규 AS 접수</h2><button class="modal-close" onclick="closeRegister()">&times;</button></div>
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-head"><h2>AS 요청서</h2><button class="modal-close" onclick="closeRegister()">&times;</button></div>
     <div class="modal-body">
+      <!-- 요청자 / 상태 -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;">
+        <div style="font-size:13px;color:#555;">요청자 : <b id="regRequester">-</b></div>
+        <div style="font-size:13px;color:#555;">AS상태 : <span class="st st-요청" style="font-size:12px;">요청</span></div>
+      </div>
+      <div style="font-size:11px;color:#e74c3c;margin-bottom:12px;">* 은 필수 입력입니다.</div>
+
       <!-- 재인입 감지 알림 -->
       <div id="regReentry" style="display:none;padding:12px 14px;background:#fce4ec;border:2px solid #ef9a9a;border-radius:6px;margin-bottom:14px;">
         <div style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:6px;">🔄 재인입 감지</div>
         <div id="regReentryInfo" style="font-size:12px;color:#555;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <!-- 고객명 -->
+      <!-- 고객 정보 섹션 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">고객명 <span style="color:#e74c3c;">*</span></label>
           <input id="regName" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;" placeholder="홍길동">
         </div>
-        <!-- 연락처 -->
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">연락처 <span style="color:#e74c3c;">*</span></label>
           <input id="regPhone" oninput="checkReentry()" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;" placeholder="01012345678">
         </div>
-        <!-- 접수제품 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">연락 요청 번호</label>
+          <input id="regCallback" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;" placeholder="콜백 번호 (연락처와 다를 경우)">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">주문일</label>
+          <input id="regOrderDate" type="date" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+        </div>
+      </div>
+
+      <!-- 제품/분류/인입사유 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">접수제품 <span style="color:#e74c3c;">*</span></label>
-          <select id="regProduct" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+          <select id="regProduct" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;"></select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">접수 분류 <span style="color:#e74c3c;">*</span></label>
+          <select id="regCategory" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+            <option value="">-선택-</option>
+            <option>일반정비</option>
+            <option>고장수리</option>
+            <option>단순문의</option>
+            <option>교환/반품</option>
           </select>
         </div>
-        <!-- 인입사유 -->
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">인입사유 <span style="color:#e74c3c;">*</span></label>
-          <select id="regReason" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
-          </select>
+          <select id="regReason" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;"></select>
         </div>
-        <!-- 담당자 -->
+      </div>
+
+      <!-- 중고/담당자 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">중고 거래 여부</label>
+          <div style="display:flex;gap:16px;padding:8px 0;">
+            <label style="font-size:13px;cursor:pointer;"><input type="radio" name="regUsed" value="N" checked style="margin-right:4px;">N</label>
+            <label style="font-size:13px;cursor:pointer;"><input type="radio" name="regUsed" value="Y" style="margin-right:4px;">Y</label>
+          </div>
+        </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">담당자</label>
           <select id="regManager" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
             <option value="">-미배정-</option>
           </select>
         </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" onclick="generateRegContent()" style="width:100%;padding:8px;">상담내용 자동 생성</button>
+        </div>
       </div>
-      <!-- 상담 메모 -->
-      <div style="margin-top:14px;">
-        <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">상담 메모</label>
-        <textarea id="regMemo" rows="3" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;resize:vertical;" placeholder="고객 증상, 요청사항 등"></textarea>
+
+      <!-- 접수 내용 -->
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">접수 내용 <span style="color:#e74c3c;">*</span></label>
+        <textarea id="regContent" rows="10" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;resize:vertical;line-height:1.7;" placeholder="[A/S 접수]&#10;&#10;1. 모델명/SN : &#10;2. 고객정보(이름/연락처) : &#10;3. 주문일/담당자 : &#10;4. 접수분류 및 인입사유 : &#10;5. 내용 : &#10;6. 연락 요청 번호 : "></textarea>
       </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-cancel" onclick="closeRegister()">취소</button>
-      <button class="btn btn-orange" onclick="submitRegister()">접수 등록</button>
+      <button class="btn btn-orange" onclick="submitRegister()">요청하기</button>
     </div>
   </div>
 </div>
@@ -1396,9 +1434,9 @@ function renderShopTabUnsettled(hist){
   if(!unsettled.length) return '<div style="color:#aaa;text-align:center;padding:30px;">미정산 건이 없습니다. 👍</div>';
 
   let totalAmt=0;
-  let h='<div style="margin-bottom:12px;padding:10px 14px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;font-size:13px;color:#e65100;font-weight:600;">⚠️ 아래 건들은 수리 완료 후 아직 협력점에 정산하지 않은 건입니다.</div>';
+  let h='<div style="margin-bottom:12px;padding:10px 14px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;font-size:13px;color:#e65100;">⚠️ 아래 건들은 수리 완료 후 아직 협력점에 정산하지 않은 건입니다. <b>정산 처리는 정산 탭</b>에서 진행해주세요.</div>';
 
-  h+='<table class="tbl" style="font-size:12px;"><thead><tr><th><input type="checkbox" class="row-chk" onclick="toggleShopSettleAll(this)"></th><th>AS번호</th><th>요청일</th><th>고객</th><th>수리내용</th><th>부품</th><th>공임비</th><th>정산 금액</th><th>수리상태</th></tr></thead><tbody>';
+  h+='<table class="tbl" style="font-size:12px;"><thead><tr><th>AS번호</th><th>요청일</th><th>고객</th><th>수리내용</th><th>부품</th><th>공임비</th><th>정산 금액</th><th>수리상태</th></tr></thead><tbody>';
   unsettled.forEach(r=>{
     const fp=r.selParts.filter(p=>!p.isPaid);
     const partAmt=fp.reduce((s,p)=>s+p.price,0);
@@ -1406,7 +1444,6 @@ function renderShopTabUnsettled(hist){
     const subtotal=partAmt+labor;
     totalAmt+=subtotal;
     h+=`<tr>
-      <td><input type="checkbox" class="row-chk shop-settle-chk" data-no="${r.no}"></td>
       <td>AS-${r.no}</td>
       <td>${r.reqDate.slice(0,10)}</td>
       <td class="cell-name">${r.name}</td>
@@ -1421,7 +1458,7 @@ function renderShopTabUnsettled(hist){
 
   h+=`<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
     <div style="font-size:15px;font-weight:800;color:#c62828;">미정산 합계: ${totalAmt.toLocaleString()}원 (${unsettled.length}건)</div>
-    <button class="btn btn-orange" onclick="doShopSettle()">선택 건 정산 처리</button>
+    <button class="btn btn-cancel" onclick="closeShopHist();goPage('settle')">정산 탭으로 이동</button>
   </div>`;
   return h;
 }
@@ -1587,11 +1624,48 @@ function openRegister(){
   // 폼 초기화
   document.getElementById('regName').value='';
   document.getElementById('regPhone').value='';
-  document.getElementById('regMemo').value='';
+  document.getElementById('regCallback').value='';
+  document.getElementById('regOrderDate').value='';
+  document.getElementById('regCategory').value='';
+  document.getElementById('regContent').value='';
+  document.querySelectorAll('input[name="regUsed"]').forEach(r=>{if(r.value==='N')r.checked=true;});
   document.getElementById('regReentry').style.display='none';
+  document.getElementById('regReentry').style.background='#fce4ec';
+  document.getElementById('regReentry').style.borderColor='#ef9a9a';
+  document.getElementById('regRequester').textContent=MANAGERS[0]||'-';
 
   document.getElementById('regModal').classList.add('open');
   document.getElementById('regName').focus();
+}
+
+function generateRegContent(){
+  const name=document.getElementById('regName').value.trim()||'';
+  const phone=document.getElementById('regPhone').value.trim()||'';
+  const product=document.getElementById('regProduct').value||'';
+  const category=document.getElementById('regCategory').value||'';
+  const reason=document.getElementById('regReason').value||'';
+  const orderDate=document.getElementById('regOrderDate').value||'';
+  const manager=document.getElementById('regManager').value||'';
+  const callback=document.getElementById('regCallback').value.trim()||'';
+
+  const content=`[A/S 접수]
+
+1. 모델명/SN : ${product} /
+2. 고객정보(이름 / 연락처) : ${name} / ${phone}
+3. 주문일 / 담당자 : ${orderDate||'-'} / ${manager||'-'}
+4. 접수분류 및 인입사유 : ${category||'-'} / ${reason||'-'}
+5. 내용 :
+-
+-
+6. 연락 요청 번호 : ${callback||phone||'-'}`;
+
+  document.getElementById('regContent').value=content;
+  // 커서를 "5. 내용" 부분으로
+  const ta=document.getElementById('regContent');
+  const pos=content.indexOf('5. 내용 :\n-')+11;
+  ta.focus();
+  ta.setSelectionRange(pos,pos);
+  toast('상담내용 자동 생성 완료');
 }
 
 function closeRegister(){
@@ -1638,13 +1712,18 @@ function submitRegister(){
   const name=document.getElementById('regName').value.trim();
   const phone=document.getElementById('regPhone').value.trim();
   const product=document.getElementById('regProduct').value;
+  const category=document.getElementById('regCategory').value;
   const reason=document.getElementById('regReason').value;
   const manager=document.getElementById('regManager').value;
-  const memo=document.getElementById('regMemo').value.trim();
+  const content=document.getElementById('regContent').value.trim();
+  const callback=document.getElementById('regCallback').value.trim();
+  const orderDate=document.getElementById('regOrderDate').value;
+  const usedTrade=document.querySelector('input[name="regUsed"]:checked')?.value||'N';
 
   if(!name){toast('고객명을 입력해주세요');return;}
   if(!phone){toast('연락처를 입력해주세요');return;}
   if(!product){toast('접수제품을 선택해주세요');return;}
+  if(!category){toast('접수 분류를 선택해주세요');return;}
   if(!reason){toast('인입사유를 선택해주세요');return;}
 
   // 재인입 여부: 미완료 건이 있을 때만 재인입
@@ -1653,20 +1732,20 @@ function submitRegister(){
   const openCases=prev.filter(r=>r.asStatus!=='완료');
   const isReentry=openCases.length>0;
 
-  // 새 번호 생성
   const maxNo=rows.reduce((m,r)=>Math.max(m,r.no),0);
   const now=new Date();
   const reqDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
   const memos=[];
-  if(memo) memos.push({time:nowStr(),text:memo});
+  if(content) memos.push({time:nowStr(),text:content});
   if(isReentry) memos.push({time:nowStr(),text:`[재인입] 기존 ${prev.length}건 이력 있음. (최근: AS-${prev[0].no} ${prev[0].reason})`});
 
   const newRow={
     no:maxNo+1, reqDate:reqDate, name:name, phone:phone, product:product,
     reason:reason, result:'', warranty:'', cost:0, manager:manager,
     asStatus:isReentry?'재인입':'요청', memos:memos, partner:'', wType:'', wReason:'',
-    costs:{p:0,l:0,v:0,e:0}, selParts:[], partNote:'', payMethod:'', shipStatus:''
+    costs:{p:0,l:0,v:0,e:0}, selParts:[], partNote:'', payMethod:'', shipStatus:'',
+    category:category, usedTrade:usedTrade, callback:callback, orderDate:orderDate
   };
 
   rows.unshift(newRow);
