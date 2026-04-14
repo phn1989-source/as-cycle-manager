@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<title>AS Cycle Manager - A/S 상담 운영 CRM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Malgun Gothic','맑은 고딕','Segoe UI',sans-serif;background:#fff;color:#333;font-size:14px;line-height:1.6;}
+
+/* ===== Top Header + Nav ===== */
+.top-header{background:#2c3e50;color:#fff;display:flex;align-items:center;height:46px;padding:0 20px;position:sticky;top:0;z-index:50;}
+.top-logo{font-size:15px;font-weight:700;margin-right:32px;white-space:nowrap;}
+.top-nav{display:flex;gap:2px;height:100%;}
+.top-nav a{display:flex;align-items:center;gap:5px;padding:0 18px;color:#b0bec5;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;}
+.top-nav a:hover{color:#fff;background:rgba(255,255,255,.06);}
+.top-nav a.active{color:#fff;border-bottom-color:#e67e22;background:rgba(255,255,255,.08);}
+.top-right{margin-left:auto;font-size:12px;color:#90a4ae;}
+
+/* ===== Page container ===== */
+.page{display:none;}
+.page.active{display:block;}
+.page-title{padding:14px 20px 10px;font-size:16px;font-weight:700;color:#333;border-bottom:1px solid #eee;}
+.page-title::before{content:'▸ ';color:#e67e22;}
+
+/* ===== Dashboard ===== */
+.dash{display:flex;gap:12px;padding:14px 20px;background:#fff;border-bottom:1px solid #eee;}
+.dash-card{flex:1;padding:14px 18px;border-radius:6px;border:1px solid #e0e0e0;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;}
+.dash-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.dash-card.active{border-color:#e67e22;box-shadow:0 2px 8px rgba(230,126,34,.15);}
+.dash-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.dash-info{display:flex;flex-direction:column;}
+.dash-num{font-size:22px;font-weight:800;line-height:1.2;}
+.dash-label{font-size:11px;color:#888;font-weight:500;}
+
+/* ===== Filter Area ===== */
+.filter-area{padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;}
+.filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}
+.filter-row:last-child{margin-bottom:0;}
+.filter-label{font-size:13px;color:#555;font-weight:600;white-space:nowrap;}
+.filter-input,.filter-select{padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;background:#fff;outline:none;}
+.filter-input:focus,.filter-select:focus{border-color:#4a90d9;}
+.filter-input{width:110px;}.filter-input.date{width:140px;}.filter-select{min-width:100px;}
+.filter-sep{color:#ccc;margin:0 2px;}
+.btn-search{padding:5px 16px;background:#4a90d9;color:#fff;border:1px solid #3a7bc8;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-reset{padding:5px 16px;background:#e67e22;color:#fff;border:1px solid #d35400;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+
+/* ===== Action Bar ===== */
+.action-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 20px;border-bottom:1px solid #e5e5e5;}
+.btn-action{padding:6px 16px;border:1px solid #ccc;border-radius:3px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit;color:#333;display:flex;align-items:center;gap:4px;}
+.btn-action:hover{background:#f5f5f5;}
+.btn-action.green{border-color:#27ae60;color:#27ae60;}
+.btn-action.green::before{content:'✔ ';}
+.btn-action.outlined{border:2px solid #333;font-weight:600;}
+
+/* ===== Table (shared) ===== */
+.table-wrap{overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
+.tbl thead th{padding:10px;background:#f7f7f7;border-bottom:2px solid #ddd;border-right:1px solid #eee;text-align:center;font-weight:600;color:#555;font-size:13px;}
+.tbl tbody td{padding:9px 10px;border-bottom:1px solid #f0f0f0;border-right:1px solid #f5f5f5;text-align:center;vertical-align:middle;}
+.tbl tbody tr:hover{background:#fffbf0;}
+.cell-name{font-weight:600;color:#333;}
+.cell-phone{font-family:monospace;font-size:13px;}
+.cell-product{text-align:left;font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+.btn-manage{padding:5px 12px;background:#e67e22;color:#fff;border:none;border-radius:3px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-manage:hover{background:#d35400;}
+.row-chk{width:15px;height:15px;cursor:pointer;}
+
+/* Badges */
+.st{padding:3px 10px;border-radius:3px;font-size:12px;font-weight:600;display:inline-block;}
+.st-요청{background:#e8f5e9;color:#2e7d32;}.st-처리중{background:#fff3e0;color:#e65100;}.st-완료{background:#e3f2fd;color:#1565c0;}.st-재인입{background:#fce4ec;color:#c62828;}.st-출고대기{background:#fff3e0;color:#e65100;}.st-출고완료{background:#e3f2fd;color:#1565c0;}
+.st-step{font-size:11px;}
+.w-유상{color:#c0392b;font-weight:600;}.w-무상{color:#2980b9;font-weight:600;}
+
+/* ===== MODAL ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:flex-start;padding:30px 20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:6px;width:100%;max-width:800px;box-shadow:0 4px 30px rgba(0,0,0,.25);border:1px solid #ccc;max-height:calc(100vh - 60px);display:flex;flex-direction:column;animation:fadeIn .15s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#f7f7f7;border-bottom:1px solid #ddd;}
+.modal-head h2{font-size:16px;font-weight:700;}
+.modal-close{width:28px;height:28px;border:1px solid #ccc;background:#fff;border-radius:3px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#999;}
+.modal-close:hover{background:#f0f0f0;color:#333;}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
+.modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #ddd;background:#fafafa;}
+
+/* Modal pipeline */
+.m-pipeline{display:flex;gap:1px;margin-bottom:16px;background:#f0f0f0;border-radius:4px;overflow:hidden;}
+.m-pipe{flex:1;text-align:center;padding:10px 4px;font-size:12px;font-weight:600;color:#999;background:#fafafa;}
+.m-pipe.done{background:#e8f5e9;color:#2e7d32;}.m-pipe.current{background:#fff3e0;color:#e65100;border-bottom:2px solid #e67e22;}.m-pipe.pending{background:#fafafa;color:#ccc;}
+
+/* Modal info */
+.m-info-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px;}
+.m-info-table th{background:#f9f9f9;padding:8px 12px;text-align:left;font-weight:600;color:#777;border:1px solid #eee;width:100px;}
+.m-info-table td{padding:8px 12px;border:1px solid #eee;}
+
+/* Modal sections */
+.m-sec{border:1px solid #e0e0e0;border-radius:4px;padding:16px;margin-bottom:14px;}
+.m-sec-title{font-size:14px;font-weight:700;color:#333;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee;}
+
+/* Memo */
+.m-memo-list{max-height:150px;overflow-y:auto;margin-bottom:10px;}
+.m-memo-item{padding:8px 10px;background:#fafafa;border:1px solid #f0f0f0;border-radius:3px;margin-bottom:5px;font-size:13px;}
+.m-memo-time{font-size:11px;color:#aaa;margin-right:6px;}
+.m-memo-input{display:flex;gap:6px;}
+.m-memo-input textarea{flex:1;padding:8px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;resize:none;outline:none;min-height:38px;}
+
+/* Shop */
+.m-shop-list{display:flex;flex-direction:column;gap:4px;}
+.m-shop{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;}
+.m-shop:hover{background:#fafafa;}.m-shop.selected{border-color:#e67e22;background:#fef8f0;}
+.m-shop input[type=radio]{margin:0;width:16px;height:16px;}.m-shop-name{font-weight:600;font-size:13px;}.m-shop-addr{font-size:12px;color:#999;}.m-shop-dist{margin-left:auto;font-size:12px;color:#e67e22;font-weight:600;}
+
+/* Warranty */
+.m-w-group{display:flex;gap:8px;}
+.m-w-opt{flex:1;display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:14px;}
+.m-w-opt:hover{background:#fafafa;}.m-w-opt.sel-free{border-color:#27ae60;background:#f0faf4;}.m-w-opt.sel-paid{border-color:#e67e22;background:#fef8f0;}
+.m-w-opt input[type=radio]{margin:0;width:16px;height:16px;}.m-w-label{font-weight:700;font-size:14px;}.m-w-desc{font-size:12px;color:#999;}
+
+/* Settle target */
+.settle-target{padding:14px 16px;border-radius:6px;margin-bottom:14px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;}
+.settle-target.target-partner{background:#e3f2fd;border:2px solid #64b5f6;color:#1565c0;}
+.settle-target.target-customer{background:#fff3e0;border:2px solid #ffb74d;color:#e65100;}
+.settle-target .settle-icon{font-size:22px;}.settle-target .settle-info{flex:1;}.settle-target .settle-label{font-size:12px;font-weight:400;color:#888;}
+
+/* Cost */
+.m-cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.m-cost-group label{display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:3px;}
+.m-cost-group input,.m-cost-group select{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;}
+.m-cost-total{margin-top:12px;padding:12px 14px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;display:flex;justify-content:space-between;align-items:center;}
+.m-cost-total .tl{font-size:14px;font-weight:600;color:#e65100;}.m-cost-total .tv{font-size:20px;font-weight:800;color:#e65100;}
+
+/* Parts */
+.m-parts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:6px;}
+.m-part{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;cursor:pointer;}
+.m-part:hover{background:#fafafa;}.m-part.selected{border-color:#e67e22;background:#fef8f0;font-weight:600;color:#e65100;}
+.m-part input[type=checkbox]{margin:0;width:15px;height:15px;}.m-part-price{font-size:11px;color:#aaa;}
+
+/* Pay */
+.m-pay-total{padding:12px 14px;background:#fef8f0;border:1px solid #f0c27a;border-radius:4px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+
+/* Notice */
+.m-notice{padding:8px 12px;border-radius:3px;font-size:13px;display:flex;align-items:center;gap:5px;margin-top:10px;}
+.m-notice-warn{background:#fff8e1;border:1px solid #ffe082;color:#e65100;}.m-notice-info{background:#e3f2fd;border:1px solid #90caf9;color:#1565c0;}
+
+/* Buttons */
+.btn{padding:7px 16px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-primary{background:#4a90d9;color:#fff;border-color:#3a7bc8;}.btn-primary:hover{background:#3a7bc8;}
+.btn-orange{background:#e67e22;color:#fff;border-color:#d35400;}.btn-orange:hover{background:#d35400;}
+.btn-danger{background:#e74c3c;color:#fff;border-color:#c0392b;}.btn-danger:hover{background:#c0392b;}
+.btn-cancel{background:#fff;color:#333;}.btn-cancel:hover{background:#f5f5f5;}
+.btn-sm{padding:4px 12px;font-size:12px;}
+
+/* ===== Admin page ===== */
+.admin-layout{display:flex;gap:20px;padding:20px;}
+.admin-sidebar{width:180px;flex-shrink:0;}
+.admin-sidebar a{display:block;padding:9px 14px;font-size:13px;color:#555;text-decoration:none;border-radius:4px;margin-bottom:2px;cursor:pointer;}
+.admin-sidebar a:hover{background:#f5f5f5;}.admin-sidebar a.active{background:#fff3e0;color:#e67e22;font-weight:700;}
+.admin-main{flex:1;min-width:0;}
+.admin-card{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;}
+.admin-card-title{font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;}
+.admin-list{list-style:none;}
+.admin-list li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #f5f5f5;font-size:13px;}
+.admin-list li:last-child{border-bottom:none;}
+.admin-list .item-name{flex:1;font-weight:500;}
+.admin-list .item-price{color:#e65100;font-weight:600;width:80px;text-align:right;}
+.admin-list .item-actions{display:flex;gap:4px;}
+.admin-add-row{display:flex;gap:6px;margin-top:10px;}
+.admin-add-row input{flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;}
+.admin-add-row input:focus{border-color:#4a90d9;}
+
+/* Pay page */
+.pay-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#fce4ec;color:#c62828;font-size:10px;font-weight:800;border:1px solid #ef9a9a;border-radius:2px;}
+.pay-row{cursor:pointer;}.pay-row:hover{background:#fffbf0 !important;}.pay-row.selected-row{background:#fff8e1 !important;}
+.pay-panel-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #ddd;}
+.pay-field{margin-bottom:10px;}
+.pay-field label{display:block;font-size:11px;font-weight:600;color:#777;margin-bottom:3px;}
+.pay-field input,.pay-field select{width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;outline:none;}
+.pay-field input:focus,.pay-field select:focus{border-color:#4a90d9;}
+.pay-date{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#333;margin-bottom:14px;}
+.pay-btn{display:block;width:100%;padding:8px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:center;}
+.pay-btn-approve{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;}
+.pay-btn-approve:hover{background:#c8e6c9;}
+.pay-btn-reject{background:#fce4ec;color:#c62828;border-color:#ef9a9a;}
+.pay-btn-reject:hover{background:#f8bbd0;}
+.pay-btn-detail{background:#e3f2fd;color:#1565c0;border-color:#90caf9;}
+.pay-btn-detail:hover{background:#bbdefb;}
+
+/* Settle tabs */
+.stab{transition:all .15s;}
+.stab:hover{color:#e65100 !important;}
+
+/* Part warranty chip */
+.pw-free{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;}
+.pw-paid{background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;}
+
+/* Confirm & Toast */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:300;justify-content:center;align-items:center;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:#fff;border:1px solid #ccc;border-radius:6px;padding:24px;max-width:400px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.confirm-box h3{font-size:15px;margin-bottom:8px;}.confirm-box p{font-size:13px;color:#666;margin-bottom:16px;}
+.confirm-btns{display:flex;gap:8px;justify-content:center;}
+.toast{position:fixed;bottom:16px;right:16px;background:#333;color:#fff;padding:10px 20px;border-radius:4px;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.2);transform:translateY(60px);opacity:0;transition:all .25s;z-index:999;}
+.toast.show{transform:translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ===== Top Header + Navigation ===== -->
+<div class="top-header">
+  <div class="top-logo">🚲 AS Cycle Manager</div>
+  <div class="top-nav">
+    <a class="active" onclick="goPage('as')">📋 AS 내역</a>
+    <a onclick="goPage('settle')">💰 정산</a>
+    <a onclick="goPage('pay')">💳 AS 결제</a>
+    <a onclick="goPage('ship')">📦 출고 물품</a>
+    <a onclick="goPage('partner')">🏭 협력점</a>
+    <a onclick="goPage('admin')">⚙️ 관리</a>
+  </div>
+  <div class="top-right">
+    <button onclick="openRegister()" style="padding:5px 16px;background:#e67e22;color:#fff;border:1px solid #d35400;border-radius:3px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-right:12px;">+ 신규 접수</button>
+    <button onclick="resetAll()" style="padding:3px 12px;background:rgba(255,255,255,.15);color:#ef9a9a;border:1px solid rgba(255,255,255,.2);border-radius:3px;font-size:11px;cursor:pointer;font-family:inherit;margin-right:8px;">🔄 데이터 초기화</button>
+    A/S 상담팀
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: AS 내역                              -->
+<!-- ========================================== -->
+<div class="page active" id="page-as">
+  <div class="page-title">AS 내역</div>
+  <!-- Dashboard -->
+  <div class="dash" id="asDash"></div>
+  <div class="filter-area">
+    <div class="filter-row">
+      <span class="filter-label">요청일</span>
+      <input class="filter-input date" type="date" value="2026-01-13"><span class="filter-sep">~</span><input class="filter-input date" type="date" value="2026-04-13">
+      <span class="filter-label" style="margin-left:8px;">전화번호</span><input class="filter-input" placeholder="">
+      <span class="filter-label" style="margin-left:8px;">접수 제품</span>
+      <select class="filter-select"><option>-선택-</option><option>비아지오 전기자전거 V6_블랙[스로틀]</option><option>비아지오 전기자전거 V5_블랙[PAS]</option></select>
+      <span class="filter-label" style="margin-left:8px;">AS 상태</span>
+      <select class="filter-select" id="filterStatus"><option value="">-전체-</option><option value="요청">요청</option><option value="처리중">처리중</option><option value="완료">완료</option><option value="재인입">재인입</option></select>
+      <span class="filter-label" style="margin-left:8px;">담당자</span>
+      <select class="filter-select"><option>-전체-</option><option>한호성</option><option>이동운</option><option>박나현</option><option>최규상</option><option>송재일</option><option>김수진</option><option>정다솜</option></select>
+      <button class="btn-reset" onclick="resetFilters()">초기화</button>
+      <button class="btn-search" onclick="applyFilter()">검색</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">인입 사유</span>
+      <select class="filter-select" id="filterReason"><option value="">-전체-</option></select>
+      <span class="filter-label" style="margin-left:8px;">유상 여부</span>
+      <select class="filter-select"><option>-전체-</option><option>유상</option><option>무상</option></select>
+      <span class="filter-label" style="margin-left:8px;">목록수</span>
+      <select class="filter-select" style="width:60px;"><option>150</option><option>50</option><option>100</option></select>
+    </div>
+  </div>
+  <div class="action-bar">
+    <span id="asCount" style="font-size:12px;color:#888;font-weight:600;margin-right:auto;"></span>
+    <button class="btn-action green" onclick="toast('문자발송 (목업)')">한 내역 문자발송</button>
+    <button class="btn-action green" onclick="bulkComplete()">선택 건 일괄완료</button>
+    <button class="btn-action outlined" onclick="toast('엑셀 다운로드 (목업)')">엑셀 다운로드</button>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th><input type="checkbox" class="row-chk" onclick="toggleAll(this)"></th>
+        <th>관리</th>
+        <th>No.</th>
+        <th>요청일</th>
+        <th>고객명</th>
+        <th>연락처</th>
+        <th>접수제품</th>
+        <th>인입사유</th>
+        <th>유상여부</th>
+        <th>AS비용</th>
+        <th>결제상태</th>
+        <th>담당자</th>
+        <th>처리단계</th>
+        <th>AS상태</th>
+      </tr></thead>
+      <tbody id="asBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: AS 결제                               -->
+<!-- ========================================== -->
+<div class="page" id="page-pay">
+  <div class="page-title">AS 결제</div>
+  <div style="display:flex;gap:0;min-height:calc(100vh - 130px);">
+    <!-- 왼쪽: 결제 목록 테이블 -->
+    <div style="flex:1;overflow-x:auto;border-right:1px solid #e5e5e5;">
+      <div class="filter-area" style="padding:8px 16px;">
+        <div class="filter-row">
+          <span class="filter-label">결제상태</span>
+          <select class="filter-select" id="payFilterStatus"><option value="대기">결제대기</option><option value="">전체</option><option value="완료">승인완료</option><option value="미승인">미승인</option></select>
+          <span class="filter-label" style="margin-left:8px;">기간</span>
+          <input class="filter-input date" type="date" value="2026-04-01"><span class="filter-sep">~</span><input class="filter-input date" type="date" value="2026-04-13">
+          <button class="btn-search" onclick="renderPay()">검색</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="tbl" style="font-size:12px;">
+          <thead><tr>
+            <th>No.</th>
+            <th></th>
+            <th>고객명</th>
+            <th>고객 전화번호</th>
+            <th>결제방법</th>
+            <th>상품명</th>
+            <th>무료체험/<br>렌탈</th>
+            <th>결제금액</th>
+            <th>할인 금액</th>
+            <th>쿠폰할인<br>금액</th>
+            <th>카드사명</th>
+            <th>카드번호</th>
+            <th>유효기간</th>
+            <th>결제상태</th>
+            <th>승인번호</th>
+            <th>메모</th>
+          </tr></thead>
+          <tbody id="payBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 결제 처리 패널 -->
+    <div style="width:280px;flex-shrink:0;background:#fafafa;padding:16px;font-size:13px;" id="payPanel">
+      <div style="color:#aaa;text-align:center;padding:40px 0;">
+        결제 건을 선택해주세요
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: 출고 물품                             -->
+<!-- ========================================== -->
+<div class="page" id="page-ship">
+  <div class="page-title">출고 물품 관리</div>
+  <div class="filter-area">
+    <div class="filter-row">
+      <span class="filter-label">출고 상태</span>
+      <select class="filter-select" id="shipFilter"><option value="">전체</option><option value="출고대기">출고대기</option><option value="출고완료">출고완료</option></select>
+      <span class="filter-label" style="margin-left:8px;">기간</span>
+      <input class="filter-input date" type="date" value="2026-04-01"><span class="filter-sep">~</span><input class="filter-input date" type="date" value="2026-04-13">
+      <button class="btn-search" onclick="renderShip()">검색</button>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-action outlined" onclick="toast('출고요청서 다운로드 (목업)')">📄 출고요청서 다운로드</button>
+    <button class="btn-action outlined" onclick="toast('엑셀 다운로드 (목업)')">엑셀 다운로드</button>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>No.</th>
+        <th>AS번호</th>
+        <th>고객명</th>
+        <th>협력점</th>
+        <th>출고 부품</th>
+        <th>부품 금액</th>
+        <th>출고 메모</th>
+        <th>출고 상태</th>
+        <th>결제</th>
+      </tr></thead>
+      <tbody id="shipBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: 정산                                  -->
+<!-- ========================================== -->
+<div class="page" id="page-settle">
+  <div class="page-title">정산 관리</div>
+  <div style="padding:12px 20px;">
+    <!-- 탭 -->
+    <div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid #eee;">
+      <div class="stab active" onclick="setStab('free',this)" style="padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #e67e22;margin-bottom:-2px;color:#e65100;">🏭 무상 정산 (협력점 결제서류)</div>
+      <div class="stab" onclick="setStab('paid',this)" style="padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#999;">👤 유상 정산 (고객 청구)</div>
+    </div>
+
+    <!-- 무상 정산 -->
+    <div id="settleTab-free">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:13px;color:#555;">협력점에 정산할 무상 수리/부품 건을 모아 결제서류를 작성합니다.</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm btn-cancel" onclick="toast('결제서류 다운로드 (목업)')">📄 결제서류 다운로드</button>
+          <button class="btn btn-sm btn-cancel" onclick="toast('엑셀 다운로드 (목업)')">엑셀 다운로드</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr>
+          <th><input type="checkbox" class="row-chk"></th>
+          <th>AS번호</th>
+          <th>고객명</th>
+          <th>협력점</th>
+          <th>구분</th>
+          <th>내역</th>
+          <th>금액</th>
+          <th>정산상태</th>
+        </tr></thead>
+        <tbody id="settleFreeBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 유상 정산 -->
+    <div id="settleTab-paid" style="display:none;">
+      <div style="font-size:13px;color:#555;margin-bottom:12px;">고객에게 청구할 유상 수리/부품 건입니다. <strong>AS결제 창</strong>으로 넘겨 결제를 진행합니다.</div>
+      <table class="tbl">
+        <thead><tr>
+          <th>AS번호</th>
+          <th>고객명</th>
+          <th>연락처</th>
+          <th>구분</th>
+          <th>내역</th>
+          <th>청구금액</th>
+          <th>결제상태</th>
+          <th>결제</th>
+        </tr></thead>
+        <tbody id="settlePaidBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: 협력점 관리                            -->
+<!-- ========================================== -->
+<div class="page" id="page-partner">
+  <div class="page-title">협력점 배정 관리</div>
+  <div class="filter-area" style="padding:10px 20px;">
+    <div class="filter-row">
+      <span class="filter-label">지역</span>
+      <select class="filter-select" id="partnerAreaFilter" onchange="renderPartner()"><option value="">전체</option></select>
+      <span class="filter-label" style="margin-left:8px;">검색</span>
+      <input class="filter-input" id="partnerSearch" placeholder="협력점명" oninput="renderPartner()" style="width:160px;">
+      <span class="filter-label" style="margin-left:8px;">정렬</span>
+      <select class="filter-select" id="partnerSort" onchange="renderPartner()">
+        <option value="unsettled">미정산 많은순</option>
+        <option value="active">배정 많은순</option>
+        <option value="name">이름순</option>
+      </select>
+    </div>
+  </div>
+  <div id="partnerSummary" style="padding:10px 20px;"></div>
+  <div id="partnerList" style="padding:0 20px 20px;"></div>
+</div>
+
+<!-- ========================================== -->
+<!-- PAGE: 관리 (Admin)                         -->
+<!-- ========================================== -->
+<div class="page" id="page-admin">
+  <div class="page-title">관리</div>
+  <div class="admin-layout">
+    <div class="admin-sidebar">
+      <a class="active" onclick="goAdmin('reason')">인입사유 관리</a>
+      <a onclick="goAdmin('parts')">부품 관리</a>
+      <a onclick="goAdmin('product')">접수제품 관리</a>
+      <a onclick="goAdmin('shops')">협력점 관리</a>
+    </div>
+    <div class="admin-main" id="adminMain"></div>
+  </div>
+</div>
+
+<!-- ===== REGISTER MODAL ===== -->
+<div class="modal-overlay" id="regModal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head"><h2>신규 AS 접수</h2><button class="modal-close" onclick="closeRegister()">&times;</button></div>
+    <div class="modal-body">
+      <!-- 재인입 감지 알림 -->
+      <div id="regReentry" style="display:none;padding:12px 14px;background:#fce4ec;border:2px solid #ef9a9a;border-radius:6px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:6px;">🔄 재인입 감지</div>
+        <div id="regReentryInfo" style="font-size:12px;color:#555;"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <!-- 고객명 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">고객명 <span style="color:#e74c3c;">*</span></label>
+          <input id="regName" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;" placeholder="홍길동">
+        </div>
+        <!-- 연락처 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">연락처 <span style="color:#e74c3c;">*</span></label>
+          <input id="regPhone" oninput="checkReentry()" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;" placeholder="01012345678">
+        </div>
+        <!-- 접수제품 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">접수제품 <span style="color:#e74c3c;">*</span></label>
+          <select id="regProduct" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+          </select>
+        </div>
+        <!-- 인입사유 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">인입사유 <span style="color:#e74c3c;">*</span></label>
+          <select id="regReason" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+          </select>
+        </div>
+        <!-- 담당자 -->
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">담당자</label>
+          <select id="regManager" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;">
+            <option value="">-미배정-</option>
+          </select>
+        </div>
+      </div>
+      <!-- 상담 메모 -->
+      <div style="margin-top:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:4px;">상담 메모</label>
+        <textarea id="regMemo" rows="3" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;outline:none;resize:vertical;" placeholder="고객 증상, 요청사항 등"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-cancel" onclick="closeRegister()">취소</button>
+      <button class="btn btn-orange" onclick="submitRegister()">접수 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SHOP HISTORY MODAL ===== -->
+<div class="modal-overlay" id="shopHistModal">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-head"><h2 id="shopHistTitle">협력점 이력</h2><button class="modal-close" onclick="closeShopHist()">&times;</button></div>
+    <div class="modal-body" id="shopHistBody" style="padding:0;"></div>
+    <div class="modal-foot"><button class="btn btn-cancel" onclick="closeShopHist()">닫기</button></div>
+  </div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-head"><h2 id="mTitle">AS 관리</h2><button class="modal-close" onclick="closeDetail()">&times;</button></div>
+    <div class="modal-body" id="mBody"></div>
+    <div class="modal-foot" id="mFoot"></div>
+  </div>
+</div>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box"><h3 id="cfTitle"></h3><p id="cfText"></p><div class="confirm-btns"><button class="btn btn-cancel" onclick="closeCf()">취소</button><button class="btn btn-primary" id="cfOk">확인</button></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+// ===== STORAGE =====
+const STORAGE_KEY = 'asCycleManager';
+const DATA_VERSION = 2; // 데이터 구조 변경 시 올려주세요
+
+function saveAll(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      _v: DATA_VERSION, REASONS, PARTS_LIST, PRODUCTS, SHOPS, rows, payData
+    }));
+  }catch(e){}
+}
+
+// row 필수 속성 보충
+function normalizeRow(r){
+  if(!r.memos||!Array.isArray(r.memos)) r.memos=[];
+  if(!r.selParts||!Array.isArray(r.selParts)) r.selParts=[];
+  if(!r.costs||typeof r.costs!=='object') r.costs={p:0,l:0,v:0,e:0};
+  if(r.asStatus===undefined) r.asStatus='요청';
+  if(r.warranty===undefined) r.warranty='';
+  if(r.partner===undefined) r.partner='';
+  if(r.wType===undefined) r.wType='';
+  if(r.wReason===undefined) r.wReason='';
+  if(r.partNote===undefined) r.partNote='';
+  if(r.payMethod===undefined) r.payMethod='';
+  if(r.shipStatus===undefined) r.shipStatus='';
+  if(r.cost===undefined) r.cost=0;
+  if(r.result===undefined) r.result='';
+  if(r.manager===undefined) r.manager='';
+  return r;
+}
+
+function loadAll(){
+  try{
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(d){
+      // 버전이 다르면 localStorage 무시 (새 샘플데이터 사용)
+      if(d._v !== DATA_VERSION){
+        localStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+      if(d.REASONS&&d.REASONS.length) REASONS = d.REASONS;
+      if(d.PARTS_LIST&&d.PARTS_LIST.length) PARTS_LIST = d.PARTS_LIST;
+      if(d.PRODUCTS&&d.PRODUCTS.length) PRODUCTS = d.PRODUCTS;
+      if(d.SHOPS&&d.SHOPS.length) SHOPS = d.SHOPS;
+      if(d.rows&&d.rows.length){ rows = d.rows; rows.forEach(normalizeRow); }
+      if(d.payData) payData = d.payData;
+      return true;
+    }
+  }catch(e){
+    // 파싱 실패 시 localStorage 정리
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  return false;
+}
+
+function resetAll(){
+  if(!confirm('모든 데이터를 초기 상태로 되돌리시겠습니까?\n(현재 저장된 데이터가 삭제됩니다)')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+// ===== CONFIG (editable via admin) =====
+let REASONS = ['전·후륜 브레이크','배터리','스로틀 레버','에러코드','앞바퀴 소음','페달','타이어','계기판/디스플레이','단순문의'];
+let PARTS_LIST = [
+  {name:'브레이크 패드',price:12000},{name:'브레이크 레버',price:18000},{name:'타이어 (앞)',price:15000},{name:'타이어 (뒤)',price:15000},
+  {name:'튜브',price:8000},{name:'체인',price:22000},{name:'변속기 케이블',price:10000},{name:'안장',price:25000},
+  {name:'페달 (좌/우)',price:20000},{name:'그립',price:8000},{name:'벨',price:5000},{name:'라이트',price:12000},
+  {name:'스로틀 레버',price:35000},{name:'배터리',price:180000},
+];
+let PRODUCTS = ['비아지오 전기자전거 V6_블랙[스로틀]','비아지오 전기자전거 V5_블랙[PAS]','비아지오 전기자전거 V6_블랙[PAS]'];
+let SHOPS = []; // 초기값은 엑셀 또는 localStorage에서 로드
+let DEFAULT_SHOPS_URL = 'shops_data.json'; // 기본 데이터 파일
+const STEPS=['요청','상담완료','협력점배정','유/무상확정','부품선택','완료'];
+
+// ===== DATA =====
+let rows=[
+  {no:7062,reqDate:'2026-04-13 13:38',name:'김형균',phone:'01032563200',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'전·후륜 브레이크',result:'',warranty:'',cost:0,manager:'한호성',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7061,reqDate:'2026-04-13 13:38',name:'이희순',phone:'01038793066',product:'비아지오 전기자전거 V6_블랙[PAS]',reason:'배터리',result:'',warranty:'',cost:0,manager:'',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7060,reqDate:'2026-04-13 13:34',name:'유만종',phone:'01020309330',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'스로틀 레버',result:'일반정비(유상)',warranty:'유상',cost:35000,manager:'이동운',asStatus:'완료',memos:[{time:'04/13 13:40',text:'스로틀 레버 작동 불량.'},{time:'04/13 14:00',text:'바이크플러스 강남점 배정.'},{time:'04/13 15:00',text:'유상 확정.'},{time:'04/13 16:00',text:'[고객 청구] 정산 35,000원'},{time:'04/13 16:30',text:'스로틀 레버 출고.'},{time:'04/13 17:00',text:'법인카드 결제. AS 종결.'}],partner:'바이크플러스 강남점',wType:'paid',wReason:'보증 만료',costs:{p:35000,l:0,v:0,e:0},selParts:[{name:'스로틀 레버',price:35000}],partNote:'',payMethod:'법인카드',shipStatus:'출고완료'},
+  {no:7059,reqDate:'2026-04-13 13:34',name:'가덕순',phone:'01066893214',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'에러코드',result:'재통화 필요',warranty:'',cost:0,manager:'이동운',asStatus:'처리중',memos:[{time:'04/13 13:45',text:'에러코드 E03. 배터리 커넥터 점검 필요.'}],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7058,reqDate:'2026-04-13 13:33',name:'권금석(50)',phone:'01066845734',product:'비아지오 전기자전거 V5_블랙[PAS]',reason:'스로틀 레버',result:'',warranty:'',cost:0,manager:'송재일',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7057,reqDate:'2026-04-13 13:30',name:'심종식',phone:'01026105725',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'앞바퀴 소음',result:'',warranty:'',cost:0,manager:'박나현',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7056,reqDate:'2026-04-13 12:29',name:'김현성',phone:'01053244340',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'배터리',result:'',warranty:'',cost:0,manager:'최규상',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7055,reqDate:'2026-04-13 12:27',name:'양대진',phone:'01076690332',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'단순문의',result:'단순문의',warranty:'',cost:0,manager:'한호성',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7054,reqDate:'2026-04-13 12:26',name:'윤수아',phone:'01067119241',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'스로틀 레버',result:'',warranty:'',cost:0,manager:'박나현',asStatus:'요청',memos:[],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  {no:7050,reqDate:'2026-04-13 12:18',name:'김연오',phone:'01095540357',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'계기판/디스플레이',result:'',warranty:'',cost:0,manager:'정다솜',asStatus:'재인입',memos:[{time:'04/12 10:00',text:'계기판 속도 표시 오류.'},{time:'04/13 12:22',text:'재인입. 증상 반복.'}],partner:'',wType:'',wReason:'',costs:{p:0,l:0,v:0,e:0},selParts:[],partNote:'',payMethod:'',shipStatus:''},
+  // 출고 대기 건 샘플
+  {no:7045,reqDate:'2026-04-12 16:00',name:'최유진',phone:'01099990000',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'체인',result:'무상정비',warranty:'무상',cost:47000,manager:'이동운',asStatus:'처리중',memos:[{time:'04/12 16:00',text:'체인+안장 클램프 교체.'},{time:'04/12 17:00',text:'페달공방 서초점 배정.'},{time:'04/13 09:00',text:'무상 확정(제품 결함).'},{time:'04/13 10:00',text:'[협력점 정산] 47,000원'}],partner:'페달공방 서초점',wType:'free',wReason:'제품 결함',costs:{p:47000,l:0,v:0,e:0},selParts:[{name:'체인',price:22000},{name:'안장',price:25000}],partNote:'협력점 직배송',payMethod:'',shipStatus:'출고대기'},
+  {no:7040,reqDate:'2026-04-11 14:00',name:'오준서',phone:'01012123434',product:'비아지오 전기자전거 V6_블랙[스로틀]',reason:'에러코드',result:'무상정비',warranty:'무상',cost:25000,manager:'박나현',asStatus:'처리중',memos:[{time:'04/11 14:00',text:'행어 교체+변속 조정.'},{time:'04/11 16:00',text:'라이드케어 송파점 배정.'},{time:'04/12 09:00',text:'무상 확정.'},{time:'04/12 14:00',text:'[협력점 정산] 25,000원'}],partner:'라이드케어 송파점',wType:'free',wReason:'제품 결함',costs:{p:25000,l:0,v:0,e:0},selParts:[{name:'변속기 케이블',price:10000},{name:'브레이크 패드',price:12000}],partNote:'',payMethod:'',shipStatus:'출고대기'},
+];
+
+let currentIdx=null;let currentAdmin='reason';let currentStab='free';let currentPayIdx=null;let adminShopQ='';
+
+// ===== 결제 DATA =====
+let payData=[
+  {id:1,asNo:7060,name:'유만종',phone:'01020309330',payMethod:'무통장',product:'AS수리-스로틀레버',type:'렌탈',amount:35000,discount:0,coupon:0,card:'',cardStatus:'',approvalNo:'',memo:'유상수리',status:'대기'},
+  {id:2,asNo:7059,name:'가덕순',phone:'01066893214',payMethod:'카드',product:'AS수리-에러코드점검',type:'렌탈',amount:15000,discount:0,coupon:0,card:'국민',cardStatus:'',approvalNo:'',memo:'',status:'대기'},
+  {id:3,asNo:0,name:'박명대',phone:'01075490154',payMethod:'무통장',product:'',type:'렌탈',amount:5000,discount:0,coupon:0,card:'',cardStatus:'',approvalNo:'',memo:'',status:'대기'},
+];
+
+// ===== PAGE NAV =====
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.top-nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const navMap={as:'AS',settle:'정산',pay:'결제',ship:'출고',partner:'협력점',admin:'관리'};
+  document.querySelectorAll('.top-nav a').forEach(a=>{if(a.textContent.includes(navMap[name]||''))a.classList.add('active');});
+  if(name==='as'){renderAS();populateReasonFilter();}
+  if(name==='settle')renderSettle();
+  if(name==='pay')renderPay();
+  if(name==='ship')renderShip();
+  if(name==='partner')renderPartner();
+  if(name==='admin')renderAdmin();
+}
+
+// ===== AS TABLE =====
+function renderAS(){
+  renderDash();
+  const body=document.getElementById('asBody');
+  const sf=document.getElementById('filterStatus').value;
+  const today=new Date().toISOString().slice(0,10);
+  body.innerHTML='';
+  let count=0;
+  rows.forEach((r,i)=>{
+    if(sf&&r.asStatus!==sf)return;
+    // 대시보드 필터
+    if(dashFilter==='today'&&!r.reqDate.startsWith(today))return;
+    if(dashFilter==='pending'&&r.asStatus!=='요청'&&r.asStatus!=='처리중'&&r.asStatus!=='재인입')return;
+    if(dashFilter==='done'&&r.asStatus!=='완료')return;
+    if(dashFilter==='reentry'&&r.asStatus!=='재인입')return;
+    count++;
+    const si=getStep(r);
+    const stepLabel=STEPS[si]||'';
+    const stepCls=['st-요청','st-처리중','st-처리중','st-처리중','st-처리중','st-완료'][si]||'st-요청';
+    body.innerHTML+=`<tr data-idx="${i}">
+      <td><input type="checkbox" class="row-chk"></td>
+      <td><button class="btn-manage" onclick="openDetail(${i})">AS관리</button></td>
+      <td>${r.no}</td>
+      <td>${r.reqDate}</td>
+      <td class="cell-name">${r.name}</td>
+      <td class="cell-phone">${r.phone}</td>
+      <td class="cell-product">${r.product}</td>
+      <td>${r.reason}</td>
+      <td>${r.warranty?'<span class="w-'+r.warranty+'">'+r.warranty+'</span>':''}</td>
+      <td>${r.cost?r.cost.toLocaleString():0}</td>
+      <td>${getPayStatusBadge(r)}</td>
+      <td>${r.manager}</td>
+      <td><span class="st ${stepCls}" style="font-size:11px;">${stepLabel}</span></td>
+      <td><span class="st st-${r.asStatus}">${r.asStatus}</span></td>
+    </tr>`;
+  });
+  if(!count) body.innerHTML='<tr><td colspan="14" style="color:#aaa;padding:30px;text-align:center;">조회 결과가 없습니다.</td></tr>';
+  // 건수 표시
+  const cntEl=document.getElementById('asCount');
+  if(cntEl) cntEl.textContent=count+'건 조회';
+}
+function applyFilter(){dashFilter='';renderAS();}
+function resetFilters(){document.getElementById('filterStatus').value='';dashFilter='';renderAS();}
+function toggleAll(c){document.querySelectorAll('#asBody .row-chk').forEach(x=>x.checked=c.checked);}
+
+function bulkComplete(){
+  // 체크된 행에서 data-idx 추출
+  const checked=[];
+  document.querySelectorAll('#asBody tr').forEach(tr=>{
+    const cb=tr.querySelector('.row-chk');
+    if(cb&&cb.checked){
+      const idx=parseInt(tr.getAttribute('data-idx'));
+      if(!isNaN(idx)&&rows[idx].asStatus!=='완료') checked.push(idx);
+    }
+  });
+  if(!checked.length){toast('완료 처리할 건을 선택해주세요');return;}
+  const names=checked.map(i=>rows[i].name).join(', ');
+  cf('일괄 완료 처리',`${checked.length}건을 완료 처리하시겠습니까?\n(${names})\n\n⚠️ 주의: 일괄완료는 단순문의 등 간단한 건에만 사용해주세요.\n평상시에는 AS관리에서 이력을 남기며 처리하는 것이 원칙입니다.`,()=>{
+    const time=nowStr();
+    checked.forEach(i=>{
+      const r=rows[i];
+      r.asStatus='완료';
+      if(!r.result) r.result='일괄처리(상담완료)';
+      r.memos.push({time:time,text:'[일괄처리] 상담 완료 종결.'});
+    });
+    toast(checked.length+'건 일괄 완료 처리');
+    renderAS();
+  });
+}
+function populateReasonFilter(){
+  const sel=document.getElementById('filterReason');
+  sel.innerHTML='<option value="">-전체-</option>';
+  REASONS.forEach(r=>sel.innerHTML+=`<option>${r}</option>`);
+}
+
+// 결제상태 배지
+function getPayStatusBadge(r){
+  if(!r.wType&&!r.cost) return '<span style="color:#ccc;font-size:11px;">-</span>';
+  if(r.wType==='free') return '<span style="font-size:11px;color:#1565c0;">회사정산</span>';
+  const ps=r.payStatus||'';
+  if(ps==='결제완료') return '<span class="st st-완료" style="font-size:11px;">결제완료</span>';
+  if(ps==='결제요청') return '<span class="st st-처리중" style="font-size:11px;">결제요청</span>';
+  if(ps==='보류') return '<span class="st st-재인입" style="font-size:11px;">보류</span>';
+  if(r.wType==='paid') return '<span class="st st-요청" style="font-size:11px;">미결제</span>';
+  return '<span style="color:#ccc;font-size:11px;">-</span>';
+}
+
+// 대시보드
+let dashFilter='';
+function renderDash(){
+  const today=new Date().toISOString().slice(0,10).replace(/-/g,'-');
+  const todayRows=rows.filter(r=>r.reqDate.startsWith(today));
+  const total=rows.length;
+  const pending=rows.filter(r=>r.asStatus==='요청'||r.asStatus==='처리중'||r.asStatus==='재인입').length;
+  const done=rows.filter(r=>r.asStatus==='완료').length;
+  const reentry=rows.filter(r=>r.asStatus==='재인입').length;
+  const todayCount=todayRows.length;
+
+  const cards=[
+    {key:'',icon:'📊',bg:'#f0f4ff',color:'#1565c0',num:total,label:'전체'},
+    {key:'today',icon:'📅',bg:'#fff8e1',color:'#e65100',num:todayCount,label:'금일 접수'},
+    {key:'pending',icon:'⏳',bg:'#fff3e0',color:'#e65100',num:pending,label:'미처리'},
+    {key:'done',icon:'✅',bg:'#e8f5e9',color:'#2e7d32',num:done,label:'처리완료'},
+    {key:'reentry',icon:'🔄',bg:'#fce4ec',color:'#c62828',num:reentry,label:'재인입'},
+  ];
+
+  document.getElementById('asDash').innerHTML=cards.map(c=>
+    `<div class="dash-card ${dashFilter===c.key?'active':''}" onclick="filterDash('${c.key}')">
+      <div class="dash-icon" style="background:${c.bg};">${c.icon}</div>
+      <div class="dash-info"><div class="dash-num" style="color:${c.color};">${c.num}</div><div class="dash-label">${c.label}</div></div>
+    </div>`
+  ).join('');
+}
+
+function filterDash(key){
+  dashFilter=dashFilter===key?'':key;
+  document.getElementById('filterStatus').value='';
+  renderDash();
+  renderAS();
+}
+
+// ===== SHIP TABLE =====
+function renderShip(){
+  const body=document.getElementById('shipBody');
+  const sf=document.getElementById('shipFilter')?.value||'';
+  body.innerHTML='';
+  rows.forEach(r=>{
+    if(!r.selParts.length)return;
+    if(sf&&r.shipStatus!==sf)return;
+    const tot=r.selParts.reduce((s,p)=>s+p.price,0);
+    const status=r.shipStatus||'-';
+    body.innerHTML+=`<tr>
+      <td>${r.no}</td>
+      <td>AS-${r.no}</td>
+      <td class="cell-name">${r.name}</td>
+      <td>${r.partner?'<a style="color:#e67e22;cursor:pointer;font-weight:600;text-decoration:underline;" onclick="openShopHist(\''+r.partner.replace(/'/g,"\\'")+'\')">'+r.partner+'</a>':'-'}</td>
+      <td style="text-align:left;">${r.selParts.map(p=>p.name).join(', ')}</td>
+      <td>${tot.toLocaleString()}원</td>
+      <td>${r.partNote||'-'}</td>
+      <td><span class="st st-${status}">${status}</span></td>
+      <td>${r.payMethod||'-'}</td>
+    </tr>`;
+  });
+  if(!body.innerHTML)body.innerHTML='<tr><td colspan="9" style="color:#aaa;padding:30px;">출고 내역이 없습니다.</td></tr>';
+}
+
+// ===== SETTLE PAGE =====
+function setStab(tab, el){
+  currentStab=tab;
+  document.querySelectorAll('.stab').forEach(t=>{t.style.borderBottomColor='transparent';t.style.color='#999';});
+  el.style.borderBottomColor='#e67e22';el.style.color='#e65100';
+  document.getElementById('settleTab-free').style.display=tab==='free'?'block':'none';
+  document.getElementById('settleTab-paid').style.display=tab==='paid'?'block':'none';
+  renderSettle();
+}
+
+function renderSettle(){
+  // 무상 정산 리스트 (부품 + 공임비)
+  const fb=document.getElementById('settleFreeBody');
+  fb.innerHTML='';
+  rows.forEach(r=>{
+    const si=getStep(r);
+    if(si<4)return; // 부품 선택 완료 이후만
+    // 무상 부품
+    const freeParts=r.selParts.filter(p=>!p.isPaid);
+    if(freeParts.length>0){
+      const ptot=freeParts.reduce((s,p)=>s+p.price,0)+(r.wType==='free'?(r.laborCost||0):0);
+      fb.innerHTML+=`<tr>
+        <td><input type="checkbox" class="row-chk"></td>
+        <td>AS-${r.no}</td><td class="cell-name">${r.name}</td><td>${r.partner?`<a style="color:#e67e22;cursor:pointer;font-weight:600;text-decoration:underline;" onclick="openShopHist('${r.partner.replace(/'/g,"\\'")}')">${r.partner}</a>`:'-'}</td>
+        <td><span class="pw-free">무상</span></td>
+        <td style="text-align:left;">${freeParts.map(p=>p.name).join(', ')}${r.wType==='free'&&r.laborCost?' + 공임비':''}</td>
+        <td style="font-weight:600;">${ptot.toLocaleString()}원</td>
+        <td><span class="st st-${r.asStatus==='완료'?'완료':'처리중'}">${r.asStatus==='완료'?'완료':r.shipStatus||'대기'}</span></td>
+      </tr>`;
+    }
+  });
+  if(!fb.innerHTML)fb.innerHTML='<tr><td colspan="8" style="color:#aaa;padding:30px;">무상 정산 건이 없습니다.</td></tr>';
+
+  // 유상 정산 리스트 (고객 결제 필요한 건)
+  const pb=document.getElementById('settlePaidBody');
+  pb.innerHTML='';
+  rows.forEach(r=>{
+    const si=getStep(r);
+    if(si<4)return;
+    const paidParts=r.selParts.filter(p=>p.isPaid);
+    if(paidParts.length>0){
+      const ptot=paidParts.reduce((s,p)=>s+p.price,0)+(r.wType==='paid'?(r.laborCost||0):0);
+      const st=r.payStatus||'';
+      let stHtml,actHtml;
+      if(st==='결제완료'){stHtml='<span class="st st-완료">결제완료</span>';actHtml='-';}
+      else if(st==='결제요청'){stHtml='<span class="st st-처리중">결제요청됨</span>';actHtml='<span style="font-size:11px;color:#888;">결제팀 대기중</span>';}
+      else if(st==='보류'){stHtml='<span class="st st-재인입">보류</span>';actHtml=`<button class="btn btn-sm btn-cancel" onclick="openDetail(${rows.indexOf(r)})">수정</button> <button class="btn btn-sm btn-orange" onclick="requestPay(${r.no},'parts',${ptot})">재요청</button>`;}
+      else{stHtml='<span class="st st-요청">미결제</span>';actHtml=`<button class="btn btn-sm btn-orange" onclick="requestPay(${r.no},'parts',${ptot})">결제요청</button>`;}
+      pb.innerHTML+=`<tr>
+        <td>AS-${r.no}</td><td class="cell-name">${r.name}</td><td class="cell-phone">${r.phone}</td>
+        <td><span class="pw-paid">유상</span></td>
+        <td style="text-align:left;">${paidParts.map(p=>p.name).join(', ')}${r.wType==='paid'&&r.laborCost?' + 공임비':''}</td>
+        <td style="font-weight:600;">${ptot.toLocaleString()}원</td>
+        <td>${stHtml}</td><td>${actHtml}</td>
+      </tr>`;
+    }
+  });
+  if(!pb.innerHTML)pb.innerHTML='<tr><td colspan="8" style="color:#aaa;padding:30px;">유상 정산 건이 없습니다.</td></tr>';
+}
+
+// ===== PAY PAGE =====
+function renderPay(){
+  const body=document.getElementById('payBody');
+  const sf=document.getElementById('payFilterStatus')?.value||'';
+  body.innerHTML='';
+  payData.forEach((p,i)=>{
+    if(sf&&p.status!==sf)return;
+    const stCls=p.status==='완료'?'st-완료':p.status==='미승인'?'st-재인입':'st-요청';
+    const stLabel=p.status==='완료'?'승인완료':p.status==='미승인'?'미승인':'결제대기';
+    body.innerHTML+=`<tr class="pay-row ${currentPayIdx===i?'selected-row':''}" onclick="selectPay(${i})">
+      <td>${p.id}</td>
+      <td><span class="pay-icon">결</span></td>
+      <td class="cell-name">${p.name}</td>
+      <td class="cell-phone">${p.phone}</td>
+      <td>${p.payMethod}</td>
+      <td style="text-align:left;font-size:11px;">${p.product||'-'}</td>
+      <td>${p.type}</td>
+      <td style="font-weight:600;">${p.amount.toLocaleString()}</td>
+      <td>${p.discount}</td>
+      <td>${p.coupon}</td>
+      <td>${p.card||'-'}</td>
+      <td style="font-size:11px;font-family:monospace;">${p.cardNo||'-'}</td>
+      <td>${p.cardExp||'-'}</td>
+      <td><span class="st ${stCls}">${stLabel}</span></td>
+      <td>${p.approvalNo||'-'}</td>
+      <td style="font-size:11px;">${p.memo||'-'}</td>
+    </tr>`;
+  });
+  if(!body.innerHTML)body.innerHTML='<tr><td colspan="14" style="color:#aaa;padding:30px;">결제 건이 없습니다.</td></tr>';
+}
+
+function selectPay(i){
+  currentPayIdx=i;
+  renderPay();
+  renderPayPanel();
+}
+
+function renderPayPanel(){
+  const panel=document.getElementById('payPanel');
+  if(currentPayIdx===null){panel.innerHTML='<div style="color:#aaa;text-align:center;padding:40px 0;">결제 건을 선택해주세요</div>';return;}
+  const p=payData[currentPayIdx];
+  const isWaiting=p.status==='대기';
+
+  let h=`<div class="pay-panel-title">결제 처리 — ${p.name}</div>`;
+
+  // 결제후체크 표시
+  if(isWaiting)h+=`<div style="color:#c62828;font-size:12px;font-weight:600;margin-bottom:12px;">* 결제후체크</div>`;
+
+  // 고객 결제정보 (상담원이 넘긴 값)
+  if(p.cardNo||p.card){
+    h+='<div style="padding:10px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;margin-bottom:12px;font-size:12px;">';
+    h+=`<div style="font-weight:600;color:#e65100;margin-bottom:4px;">💳 상담원 수집 결제정보</div>`;
+    if(p.card)h+=`<div>카드사: <b>${p.card}</b></div>`;
+    if(p.cardNo)h+=`<div>카드번호: <b style="font-family:monospace;">${p.cardNo}</b></div>`;
+    if(p.cardExp)h+=`<div>유효기간: <b>${p.cardExp}</b></div>`;
+    h+='</div>';
+  }
+
+  h+=`<div class="pay-field"><label>승인번호</label><input id="ppApproval" value="${p.approvalNo||''}" placeholder="" ${!isWaiting?'disabled':''}></div>`;
+  h+=`<div class="pay-field"><label>주문번호</label><input id="ppOrder" value="${p.asNo?'AS-'+p.asNo:''}" placeholder="" disabled></div>`;
+
+  // 카드사 (상담원 값이 있으면 미리 세팅)
+  h+=`<div class="pay-field"><label>카드사</label><select id="ppCard" ${!isWaiting?'disabled':''}>
+    <option value="">-선택-</option><option ${p.card==='국민'?'selected':''}>국민</option><option ${p.card==='신한'?'selected':''}>신한</option><option ${p.card==='삼성'?'selected':''}>삼성</option><option ${p.card==='현대'?'selected':''}>현대</option><option ${p.card==='롯데'?'selected':''}>롯데</option><option ${p.card==='하나'?'selected':''}>하나</option><option ${p.card==='우리'?'selected':''}>우리</option><option ${p.card==='BC'?'selected':''}>BC</option>
+  </select></div>`;
+
+  h+=`<div class="pay-field"><label>결제번호</label><input id="ppPayNo" value="" placeholder="" ${!isWaiting?'disabled':''}></div>`;
+  h+=`<div class="pay-field"><label>할부코드</label><input id="ppInstall" value="" placeholder="" ${!isWaiting?'disabled':''}></div>`;
+
+  // 날짜
+  h+=`<div class="pay-date">2026년 04월 13일</div>`;
+
+  // 버튼
+  if(isWaiting){
+    h+=`<button class="pay-btn pay-btn-detail" onclick="toast('상세보기 (목업)')">상세보기</button>`;
+    h+=`<button class="pay-btn pay-btn-approve" onclick="approvePay()">승인 처리</button>`;
+    h+=`<button class="pay-btn pay-btn-reject" onclick="rejectPay()">미승인 처리</button>`;
+  } else {
+    h+=`<div style="padding:12px;background:${p.status==='완료'?'#e8f5e9':'#fce4ec'};border-radius:4px;text-align:center;font-size:13px;font-weight:600;color:${p.status==='완료'?'#2e7d32':'#c62828'};">${p.status==='완료'?'✅ 승인 완료':'❌ 미승인 처리됨'}</div>`;
+    h+=`<button class="pay-btn pay-btn-detail" style="margin-top:8px;" onclick="toast('상세보기 (목업)')">상세보기</button>`;
+  }
+
+  panel.innerHTML=h;
+}
+
+function approvePay(){
+  const p=payData[currentPayIdx];
+  const approval=document.getElementById('ppApproval')?.value||'';
+  cf('승인 처리',`${p.name} / ${p.amount.toLocaleString()}원 결제를 승인하시겠습니까?`,()=>{
+    p.status='완료';
+    p.approvalNo=approval||'AP'+Date.now().toString().slice(-8);
+    p.card=document.getElementById('ppCard')?.value||p.card;
+    // AS 내역에도 반영
+    const asRow=rows.find(r=>r.no===p.asNo);
+    if(asRow){asRow.payStatus='결제완료';asRow.memos.push({time:nowStr(),text:`[AS결제] 승인완료. 승인번호: ${p.approvalNo}`});}
+    toast('승인 처리 완료');
+    renderPay();renderPayPanel();
+  });
+}
+
+function rejectPay(){
+  const p=payData[currentPayIdx];
+  cf('미승인 처리',`${p.name} / ${p.amount.toLocaleString()}원 결제를 미승인(보류) 처리하시겠습니까?`,()=>{
+    p.status='미승인';
+    const asRow=rows.find(r=>r.no===p.asNo);
+    if(asRow){
+      if(p.memo==='유상수리')asRow.payStatus='보류';
+      else if(p.memo==='유상부품')asRow.partPayStatus='보류';
+      asRow.memos.push({time:nowStr(),text:`[AS결제] 미승인(보류). 상담원 확인 필요.`});
+    }
+    toast('미승인 처리 — 정산 탭에서 수정 가능');
+    renderPay();renderPayPanel();
+  });
+}
+
+// 결제요청 (정산 탭에서)
+function requestPay(no, type, amount){
+  const asRow=rows.find(r=>r.no===no);
+  if(!asRow)return;
+  cf('결제요청',`AS-${no} ${type==='repair'?'수리비':'부품비'} ${amount.toLocaleString()}원을 결제팀에 요청하시겠습니까?`,()=>{
+    // 상태 변경
+    if(type==='repair')asRow.payStatus='결제요청';
+    else asRow.partPayStatus='결제요청';
+    // payData에 추가 또는 기존 건 재활성화
+    const exists=payData.find(p=>p.asNo===no&&p.memo===(type==='repair'?'유상수리':'유상부품'));
+    if(exists){
+      // 미승인된 기존 건을 다시 대기로
+      exists.status='대기';
+      exists.approvalNo='';
+      exists.amount=amount;
+      exists.card=asRow.cardInfo||exists.card;
+      exists.cardNo=asRow.cardNo||exists.cardNo;
+      exists.cardExp=asRow.cardExp||exists.cardExp;
+    } else {
+      payData.push({
+        id:payData.length+1, asNo:no, name:asRow.name, phone:asRow.phone,
+        payMethod:asRow.cardInfo?'카드':'카드', product:type==='repair'?'AS수리-'+asRow.reason:'AS부품-'+asRow.selParts.filter(p=>p.isPaid).map(p=>p.name).join(','),
+        type:'렌탈', amount:amount, discount:0, coupon:0, card:asRow.cardInfo||'', cardNo:asRow.cardNo||'', cardExp:asRow.cardExp||'', cardStatus:'', approvalNo:'', memo:type==='repair'?'유상수리':'유상부품', status:'대기'
+      });
+    }
+    asRow.memos.push({time:nowStr(),text:`[결제요청] ${type==='repair'?'수리비':'부품비'} ${amount.toLocaleString()}원 결제팀 요청`});
+    toast('결제요청 완료 — 결제팀에서 처리합니다');
+    renderSettle();
+  });
+}
+
+// ===== ADMIN =====
+function goAdmin(section){
+  currentAdmin=section;
+  document.querySelectorAll('.admin-sidebar a').forEach(a=>a.classList.remove('active'));
+  document.querySelectorAll('.admin-sidebar a').forEach(a=>{
+    if((section==='reason'&&a.textContent.includes('인입'))||(section==='parts'&&a.textContent.includes('부품'))||(section==='product'&&a.textContent.includes('제품'))||(section==='shops'&&a.textContent.includes('협력점')))a.classList.add('active');
+  });
+  renderAdmin();
+}
+
+function renderAdmin(){
+  const el=document.getElementById('adminMain');
+  if(currentAdmin==='reason'){
+    let h='<div class="admin-card"><div class="admin-card-title">인입사유 관리 <span style="font-size:12px;color:#999;font-weight:400;">AS 접수 시 선택 항목</span></div>';
+    h+='<ul class="admin-list">';
+    REASONS.forEach((r,i)=>h+=`<li><span class="item-name">${r}</span><div class="item-actions"><button class="btn btn-sm btn-danger" onclick="delReason(${i})">삭제</button></div></li>`);
+    h+='</ul>';
+    h+='<div class="admin-add-row"><input id="newReason" placeholder="새 인입사유 입력"><button class="btn btn-sm btn-primary" onclick="addReason()">추가</button></div>';
+    h+='</div>';
+    el.innerHTML=h;
+  } else if(currentAdmin==='parts'){
+    let h='<div class="admin-card"><div class="admin-card-title">부품 관리 <span style="font-size:12px;color:#999;font-weight:400;">출고 가능 부품 목록 및 단가</span></div>';
+    h+='<ul class="admin-list">';
+    PARTS_LIST.forEach((p,i)=>h+=`<li><span class="item-name">${p.name}</span><span class="item-price">${p.price.toLocaleString()}원</span><div class="item-actions"><button class="btn btn-sm btn-cancel" onclick="editPart(${i})">수정</button><button class="btn btn-sm btn-danger" onclick="delPart(${i})">삭제</button></div></li>`);
+    h+='</ul>';
+    h+='<div class="admin-add-row"><input id="newPartName" placeholder="부품명" style="flex:2;"><input id="newPartPrice" placeholder="단가 (숫자)" style="flex:1;"><button class="btn btn-sm btn-primary" onclick="addPart()">추가</button></div>';
+    h+='</div>';
+    el.innerHTML=h;
+  } else if(currentAdmin==='product'){
+    let h='<div class="admin-card"><div class="admin-card-title">접수제품 관리 <span style="font-size:12px;color:#999;font-weight:400;">AS 접수 시 제품 선택 항목</span></div>';
+    h+='<ul class="admin-list">';
+    PRODUCTS.forEach((p,i)=>h+=`<li><span class="item-name">${p}</span><div class="item-actions"><button class="btn btn-sm btn-danger" onclick="delProduct(${i})">삭제</button></div></li>`);
+    h+='</ul>';
+    h+='<div class="admin-add-row"><input id="newProduct" placeholder="새 제품명 입력"><button class="btn btn-sm btn-primary" onclick="addProduct()">추가</button></div>';
+    h+='</div>';
+    el.innerHTML=h;
+  } else if(currentAdmin==='shops'){
+    const activeCount = SHOPS.filter(s=>s.active!==false).length;
+    let h='<div class="admin-card"><div class="admin-card-title">협력점 관리 <span style="font-size:12px;color:#999;font-weight:400;">총 '+SHOPS.length+'개 (사용중 '+activeCount+'개)</span></div>';
+
+    // 엑셀 업로드/다운로드
+    h+='<div style="display:flex;gap:6px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee;">';
+    h+='<button class="btn btn-sm btn-primary" onclick="downloadShopsExcel()">📥 엑셀 다운로드</button>';
+    h+='<label class="btn btn-sm btn-cancel" style="cursor:pointer;">📤 엑셀 업로드 <input type="file" id="shopExcelFile" accept=".xlsx,.xls,.csv" onchange="uploadShopsExcel(this)" style="display:none;"></label>';
+    h+='<span style="font-size:11px;color:#888;align-self:center;margin-left:8px;">* 엑셀 컬럼: 업체명, 연락처, 주소, 사용유무(Y/N)</span>';
+    h+='</div>';
+
+    // 검색
+    h+='<div style="margin-bottom:10px;"><input id="adminShopSearch" placeholder="협력점명, 주소, 지역 검색" oninput="adminShopQ=this.value;renderAdminShopList()" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;" value="'+(adminShopQ||'').replace(/"/g,'&quot;')+'"></div>';
+
+    // 리스트
+    const sq = adminShopQ||'';
+    let filtered = SHOPS;
+    if(sq) filtered = SHOPS.filter(s=>s.name.includes(sq)||s.addr.includes(sq)||s.area.includes(sq)||s.tel.includes(sq));
+
+    h+='<div id="adminShopListWrap"></div>';
+    h+='<div class="admin-add-row"><input id="newShopName" placeholder="협력점명" style="flex:2;"><input id="newShopAddr" placeholder="주소" style="flex:3;"><input id="newShopTel" placeholder="전화번호" style="flex:1;"><input id="newShopArea" placeholder="지역" style="flex:1;"><button class="btn btn-sm btn-primary" onclick="addShop()">추가</button></div>';
+    h+='</div>';
+    el.innerHTML=h;
+    renderAdminShopList();
+  }
+}
+
+function renderAdminShopList(){
+  const wrap=document.getElementById('adminShopListWrap');
+  if(!wrap)return;
+  const sq=adminShopQ||'';
+  let filtered=SHOPS;
+  if(sq)filtered=SHOPS.filter(s=>s.name.includes(sq)||s.addr.includes(sq)||s.area.includes(sq)||s.tel.includes(sq));
+  let h='<div style="font-size:11px;color:#888;margin-bottom:4px;">표시: '+filtered.length+'개'+(sq?' (검색 필터 적용)':'')+'</div>';
+  h+='<ul class="admin-list" style="max-height:400px;overflow-y:auto;">';
+  filtered.forEach(s=>{
+    const idx=SHOPS.indexOf(s);
+    const activeStyle=s.active===false?'opacity:0.4;':'';
+    h+=`<li style="${activeStyle}">
+      <span style="font-size:11px;color:${s.active===false?'#ccc':'#27ae60'};width:16px;">${s.active===false?'✕':'✓'}</span>
+      <span class="item-name"><a style="color:#333;cursor:pointer;text-decoration:underline;" onclick="openShopHist('${s.name.replace(/'/g,"\\'")}')">${s.name}</a></span>
+      <span style="font-size:11px;color:#888;flex:2;">${s.addr}</span>
+      <span style="font-size:11px;color:#888;width:100px;">${s.tel}</span>
+      <span style="font-size:11px;color:#e67e22;font-weight:600;width:40px;">${s.area}</span>
+      <div class="item-actions">
+        <button class="btn btn-sm btn-cancel" onclick="toggleShopActive(${idx})">${s.active===false?'활성화':'비활성'}</button>
+        <button class="btn btn-sm btn-danger" onclick="delShop(${idx})">삭제</button>
+      </div>
+    </li>`;
+  });
+  h+='</ul>';
+  wrap.innerHTML=h;
+}
+
+function addShop(){const n=document.getElementById('newShopName').value.trim();const a=document.getElementById('newShopAddr').value.trim();const t=document.getElementById('newShopTel').value.trim();const ar=document.getElementById('newShopArea').value.trim();if(!n||!a)return;SHOPS.push({name:n,addr:a,tel:t,area:ar,active:true});renderAdmin();toast('협력점 추가: '+n);}
+function delShop(i){cf('삭제','협력점 "'+SHOPS[i].name+'"을(를) 삭제하시겠습니까?',()=>{SHOPS.splice(i,1);renderAdmin();toast('삭제 완료');});}
+function toggleShopActive(i){SHOPS[i].active=SHOPS[i].active===false?true:false;renderAdmin();saveAll();toast(SHOPS[i].name+' '+(SHOPS[i].active?'활성화':'비활성화'));}
+
+// 엑셀 다운로드
+function downloadShopsExcel(){
+  const data=[['업체명','연락처','주소','사용유무']];
+  SHOPS.forEach(s=>data.push([s.name,s.tel,s.addr,s.active===false?'N':'Y']));
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:25},{wch:18},{wch:50},{wch:8}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'협력업체정보');
+  XLSX.writeFile(wb,'협력업체정보_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('엑셀 다운로드 완료');
+}
+
+// 엑셀 업로드
+function uploadShopsExcel(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      if(rows.length<2){toast('데이터가 없습니다');return;}
+      // 헤더 확인
+      const header=rows[0].map(h=>(h||'').toString().trim());
+      const nameIdx=header.findIndex(h=>h.includes('업체명')||h.includes('협력점'));
+      const telIdx=header.findIndex(h=>h.includes('연락처')||h.includes('전화'));
+      const addrIdx=header.findIndex(h=>h.includes('주소'));
+      const activeIdx=header.findIndex(h=>h.includes('사용'));
+      if(nameIdx<0){toast('업체명 컬럼을 찾을 수 없습니다');return;}
+      cf('엑셀 업로드',`${rows.length-1}개 협력점 데이터를 업로드하시겠습니까?\n(기존 데이터를 덮어씁니다)`,()=>{
+        const newShops=[];
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i];
+          const name=(r[nameIdx]||'').toString().trim();
+          if(!name)continue;
+          const tel=telIdx>=0?(r[telIdx]||'').toString().trim():'-';
+          const addr=addrIdx>=0?(r[addrIdx]||'').toString().trim():'';
+          const active=activeIdx>=0?(r[activeIdx]||'').toString().trim().toUpperCase()!=='N':true;
+          const area=addr?addr.split(/\s+/)[0]:'';
+          newShops.push({name,tel,addr,area,active});
+        }
+        SHOPS=newShops;
+        saveAll();
+        renderAdmin();
+        toast(newShops.length+'개 협력점 업로드 완료');
+      });
+    }catch(err){
+      toast('파일 읽기 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+function addReason(){const v=document.getElementById('newReason').value.trim();if(!v)return;REASONS.push(v);renderAdmin();toast('인입사유 추가: '+v);}
+function delReason(i){cf('삭제','인입사유 "'+REASONS[i]+'"을(를) 삭제하시겠습니까?',()=>{REASONS.splice(i,1);renderAdmin();toast('삭제 완료');});}
+function addPart(){const n=document.getElementById('newPartName').value.trim();const p=parseInt(document.getElementById('newPartPrice').value);if(!n||!p)return;PARTS_LIST.push({name:n,price:p});renderAdmin();toast('부품 추가: '+n);}
+function delPart(i){cf('삭제','부품 "'+PARTS_LIST[i].name+'"을(를) 삭제하시겠습니까?',()=>{PARTS_LIST.splice(i,1);renderAdmin();toast('삭제 완료');});}
+function editPart(i){const p=PARTS_LIST[i];const newPrice=prompt('단가 수정: '+p.name,p.price);if(newPrice!==null&&!isNaN(parseInt(newPrice))){p.price=parseInt(newPrice);renderAdmin();toast('단가 수정 완료');}}
+function addProduct(){const v=document.getElementById('newProduct').value.trim();if(!v)return;PRODUCTS.push(v);renderAdmin();toast('제품 추가: '+v);}
+function delProduct(i){cf('삭제','제품 "'+PRODUCTS[i]+'"을(를) 삭제하시겠습니까?',()=>{PRODUCTS.splice(i,1);renderAdmin();toast('삭제 완료');});}
+
+// ===== PARTNER PAGE (협력점 배정 관리) =====
+function renderPartner(){
+  const areaFilter=document.getElementById('partnerAreaFilter');
+  const searchVal=(document.getElementById('partnerSearch')?.value||'').trim();
+  const sortVal=document.getElementById('partnerSort')?.value||'unsettled';
+
+  // 지역 옵션 채우기
+  const areas=[...new Set(SHOPS.filter(s=>s.active!==false).map(s=>s.area))].sort();
+  const curArea=areaFilter.value;
+  areaFilter.innerHTML='<option value="">전체</option>';
+  areas.forEach(a=>areaFilter.innerHTML+=`<option ${a===curArea?'selected':''}>${a}</option>`);
+
+  // 활성 협력점 중 배정 이력이 있는 것 + 필터
+  let shopList=SHOPS.filter(s=>s.active!==false);
+  if(curArea) shopList=shopList.filter(s=>s.area===curArea);
+  if(searchVal) shopList=shopList.filter(s=>s.name.includes(searchVal));
+
+  // 각 협력점별 통계 계산
+  const shopStats=shopList.map(s=>{
+    const hist=rows.filter(r=>r.partner===s.name);
+    const active=hist.filter(r=>r.asStatus!=='완료');
+    const done=hist.filter(r=>r.asStatus==='완료');
+    let unsettledAmt=0,settledAmt=0;
+    hist.forEach(r=>{
+      if(r.wType!=='free')return;
+      const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+      const amt=fp.reduce((ss,p)=>ss+p.price,0)+(r.laborCost||0);
+      if(!amt)return;
+      if(r.settledDate) settledAmt+=amt; else unsettledAmt+=amt;
+    });
+    return {shop:s,hist,total:hist.length,active:active.length,done:done.length,unsettledAmt,settledAmt};
+  });
+
+  // 정렬
+  if(sortVal==='unsettled') shopStats.sort((a,b)=>b.unsettledAmt-a.unsettledAmt);
+  else if(sortVal==='active') shopStats.sort((a,b)=>b.active-a.active);
+  else shopStats.sort((a,b)=>a.shop.name.localeCompare(b.shop.name));
+
+  // 전체 요약
+  const totalActive=shopStats.reduce((s,x)=>s+x.active,0);
+  const totalUnsettled=shopStats.reduce((s,x)=>s+x.unsettledAmt,0);
+  const totalSettled=shopStats.reduce((s,x)=>s+x.settledAmt,0);
+  const activeShops=shopStats.filter(x=>x.active>0).length;
+
+  document.getElementById('partnerSummary').innerHTML=`<div style="display:flex;gap:12px;">
+    <div style="flex:1;padding:12px 16px;background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:#e65100;">${activeShops}</div><div style="font-size:11px;color:#888;">배정중인 협력점</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:#1565c0;">${totalActive}건</div><div style="font-size:11px;color:#888;">진행중 AS</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#fce4ec;border:1px solid #ef9a9a;border-radius:6px;text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:#c62828;">${totalUnsettled.toLocaleString()}원</div><div style="font-size:11px;color:#888;">전체 미정산</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:#2e7d32;">${totalSettled.toLocaleString()}원</div><div style="font-size:11px;color:#888;">전체 정산완료</div>
+    </div>
+  </div>`;
+
+  // 카드 리스트
+  let h='';
+  // 배정 이력 있는 것 우선, 없는 건 아래
+  const withHist=shopStats.filter(x=>x.total>0);
+  const noHist=shopStats.filter(x=>x.total===0);
+
+  withHist.forEach(x=>{
+    const s=x.shop;
+    h+=`<div onclick="openShopHist('${s.name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:8px;cursor:pointer;background:#fff;transition:all .15s;" onmouseover="this.style.borderColor='#e67e22';this.style.boxShadow='0 2px 8px rgba(230,126,34,.1)'" onmouseout="this.style.borderColor='#e0e0e0';this.style.boxShadow='none'">`;
+    // 협력점 정보
+    h+=`<div style="flex:1;min-width:0;">`;
+    h+=`<div style="display:flex;align-items:center;gap:8px;"><b style="font-size:14px;color:#333;">${s.name}</b><span style="font-size:11px;color:#e67e22;background:#fff3e0;padding:1px 8px;border-radius:3px;">${s.area}</span></div>`;
+    h+=`<div style="font-size:11px;color:#999;margin-top:3px;">${s.addr} | ${s.tel}</div>`;
+    h+=`</div>`;
+    // 통계
+    h+=`<div style="display:flex;gap:16px;text-align:center;font-size:11px;">`;
+    h+=`<div><div style="font-size:16px;font-weight:700;color:#333;">${x.total}</div>총배정</div>`;
+    h+=`<div><div style="font-size:16px;font-weight:700;color:#e65100;">${x.active}</div>진행중</div>`;
+    h+=`<div><div style="font-size:16px;font-weight:700;color:#2e7d32;">${x.done}</div>완료</div>`;
+    h+=`</div>`;
+    // 미정산
+    h+=`<div style="min-width:100px;text-align:right;">`;
+    if(x.unsettledAmt>0){
+      h+=`<div style="font-size:14px;font-weight:800;color:#c62828;">${x.unsettledAmt.toLocaleString()}원</div><div style="font-size:10px;color:#c62828;">미정산</div>`;
+    } else {
+      h+=`<div style="font-size:12px;color:#2e7d32;font-weight:600;">정산 완료</div>`;
+    }
+    h+=`</div>`;
+    h+=`<div style="color:#ccc;font-size:14px;">›</div>`;
+    h+=`</div>`;
+  });
+
+  if(noHist.length>0){
+    h+=`<div style="margin-top:16px;font-size:12px;color:#aaa;margin-bottom:8px;">배정 이력 없는 협력점 (${noHist.length}개)</div>`;
+    noHist.forEach(x=>{
+      const s=x.shop;
+      h+=`<div style="display:flex;align-items:center;gap:14px;padding:10px 16px;border:1px solid #f0f0f0;border-radius:4px;margin-bottom:4px;background:#fafafa;font-size:12px;color:#999;">`;
+      h+=`<span style="flex:1;"><b style="color:#666;">${s.name}</b> <span style="font-size:11px;">${s.area}</span></span>`;
+      h+=`<span>${s.tel}</span>`;
+      h+=`</div>`;
+    });
+  }
+
+  if(!shopStats.length) h='<div style="color:#aaa;text-align:center;padding:40px;">표시할 협력점이 없습니다.</div>';
+
+  document.getElementById('partnerList').innerHTML=h;
+}
+
+// ===== SHOP HISTORY (협력점 관리) =====
+let shopHistExpanded={};
+let shopHistTab='status';
+let shopHistName='';
+let shopHistDateFrom='';
+let shopHistDateTo='';
+
+function openShopHist(shopName){
+  shopHistName=shopName;
+  shopHistExpanded={};
+  shopHistTab='status';
+  const now=new Date();
+  shopHistDateTo=now.toISOString().slice(0,10);
+  const from=new Date(now);from.setMonth(from.getMonth()-3);
+  shopHistDateFrom=from.toISOString().slice(0,10);
+  document.getElementById('shopHistTitle').textContent=shopName;
+  renderShopHistModal();
+  document.getElementById('shopHistModal').classList.add('open');
+}
+
+function getShopHist(shopName,from,to){
+  return rows.filter(r=>{
+    if(r.partner!==shopName)return false;
+    const d=r.reqDate.slice(0,10);
+    if(from&&d<from)return false;
+    if(to&&d>to)return false;
+    return true;
+  });
+}
+
+function renderShopHistModal(){
+  const shopName=shopHistName;
+  const shop=SHOPS.find(s=>s.name===shopName);
+  const allHist=rows.filter(r=>r.partner===shopName);
+  const hist=getShopHist(shopName,shopHistDateFrom,shopHistDateTo);
+
+  // 미정산 계산 (기간 무관, 전체)
+  let unsettledAmt=0,settledAmt=0;
+  allHist.forEach(r=>{
+    if(r.wType!=='free')return;
+    const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+    const amt=fp.reduce((s,p)=>s+p.price,0)+(r.laborCost||0);
+    if(!amt)return;
+    if(r.settledDate) settledAmt+=amt; else unsettledAmt+=amt;
+  });
+
+  let h='';
+
+  // ── 협력점 헤더 ──
+  h+='<div style="padding:16px 20px;background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;display:flex;align-items:center;gap:16px;">';
+  h+='<div style="width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;">🏭</div>';
+  h+='<div style="flex:1;">';
+  h+=`<div style="font-size:16px;font-weight:700;">${shopName}</div>`;
+  if(shop) h+=`<div style="font-size:11px;color:#b0bec5;margin-top:2px;">${shop.addr||'-'} | ${shop.tel||'-'} | ${shop.area||'-'}</div>`;
+  h+='</div>';
+  h+=`<div style="display:flex;gap:16px;font-size:12px;">
+    <div style="text-align:center;"><div style="font-size:18px;font-weight:800;">${allHist.length}</div><div style="color:#b0bec5;">누적 배정</div></div>
+    <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#ef9a9a;">${unsettledAmt.toLocaleString()}원</div><div style="color:#ef9a9a;">미정산</div></div>
+    <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#81c784;">${settledAmt.toLocaleString()}원</div><div style="color:#81c784;">정산완료</div></div>
+  </div>`;
+  h+='</div>';
+
+  // ── 날짜 + 탭 ──
+  h+='<div style="padding:10px 20px;background:#fafafa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+  h+=`<span style="font-size:12px;color:#777;font-weight:600;">기간</span>`;
+  h+=`<input type="date" value="${shopHistDateFrom}" onchange="shopHistDateFrom=this.value;renderShopHistModal()" style="padding:4px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;">`;
+  h+=`<span style="color:#ccc;">~</span>`;
+  h+=`<input type="date" value="${shopHistDateTo}" onchange="shopHistDateTo=this.value;renderShopHistModal()" style="padding:4px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;">`;
+  h+=`<span style="font-size:11px;color:#aaa;margin-left:4px;">(${hist.length}건)</span>`;
+  h+=`<div style="margin-left:auto;display:flex;gap:2px;">`;
+  const tabs=[
+    {key:'status',label:'📋 배정 현황'},
+    {key:'unsettled',label:'💸 미정산'},
+    {key:'settled',label:'✅ 정산 완료'},
+  ];
+  tabs.forEach(t=>{
+    const isActive=shopHistTab===t.key;
+    h+=`<div onclick="shopHistTab='${t.key}';renderShopHistModal()" style="padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:3px 3px 0 0;${isActive?'background:#fff;color:#e65100;border:1px solid #ddd;border-bottom:1px solid #fff;':'background:transparent;color:#999;border:1px solid transparent;'}">${t.label}</div>`;
+  });
+  h+=`</div></div>`;
+
+  // ── 탭 내용 ──
+  h+='<div style="padding:14px 20px;min-height:200px;">';
+  if(shopHistTab==='status') h+=renderShopTabStatus(hist);
+  else if(shopHistTab==='unsettled') h+=renderShopTabUnsettled(hist);
+  else if(shopHistTab==='settled') h+=renderShopTabSettled(hist);
+  h+='</div>';
+
+  document.getElementById('shopHistBody').innerHTML=h;
+}
+
+// ── 탭1: 배정 현황 (수리 진행상황 중심) ──
+function renderShopTabStatus(hist){
+  if(!hist.length) return '<div style="color:#aaa;text-align:center;padding:30px;">해당 기간에 배정 이력이 없습니다.</div>';
+  const req=hist.filter(r=>r.asStatus==='요청'||r.asStatus==='재인입').length;
+  const proc=hist.filter(r=>r.asStatus==='처리중').length;
+  const done=hist.filter(r=>r.asStatus==='완료').length;
+
+  let h=`<div style="display:flex;gap:8px;margin-bottom:14px;">
+    <div style="flex:1;padding:10px;background:#fff3e0;border:1px solid #ffe0b2;border-radius:4px;text-align:center;font-size:12px;"><b style="font-size:16px;color:#e65100;">${req}</b><br>수리 대기</div>
+    <div style="flex:1;padding:10px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;text-align:center;font-size:12px;"><b style="font-size:16px;color:#1565c0;">${proc}</b><br>수리중</div>
+    <div style="flex:1;padding:10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;text-align:center;font-size:12px;"><b style="font-size:16px;color:#2e7d32;">${done}</b><br>수리 완료</div>
+  </div>`;
+
+  h+='<div id="shopHistList">';
+  h+=renderShopHistCards(hist);
+  h+='</div>';
+  return h;
+}
+
+// ── 탭2: 미정산 (수리 완료됐지만 아직 정산 안 해준 건) ──
+function renderShopTabUnsettled(hist){
+  // 무상 건 중 정산 안 된 것
+  const unsettled=hist.filter(r=>{
+    if(r.wType!=='free')return false;
+    if(r.settledDate)return false;
+    const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+    return fp.length>0;
+  });
+  if(!unsettled.length) return '<div style="color:#aaa;text-align:center;padding:30px;">미정산 건이 없습니다. 👍</div>';
+
+  let totalAmt=0;
+  let h='<div style="margin-bottom:12px;padding:10px 14px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;font-size:13px;color:#e65100;font-weight:600;">⚠️ 아래 건들은 수리 완료 후 아직 협력점에 정산하지 않은 건입니다.</div>';
+
+  h+='<table class="tbl" style="font-size:12px;"><thead><tr><th><input type="checkbox" class="row-chk" onclick="toggleShopSettleAll(this)"></th><th>AS번호</th><th>요청일</th><th>고객</th><th>수리내용</th><th>부품</th><th>공임비</th><th>정산 금액</th><th>수리상태</th></tr></thead><tbody>';
+  unsettled.forEach(r=>{
+    const fp=r.selParts.filter(p=>!p.isPaid);
+    const partAmt=fp.reduce((s,p)=>s+p.price,0);
+    const labor=r.laborCost||0;
+    const subtotal=partAmt+labor;
+    totalAmt+=subtotal;
+    h+=`<tr>
+      <td><input type="checkbox" class="row-chk shop-settle-chk" data-no="${r.no}"></td>
+      <td>AS-${r.no}</td>
+      <td>${r.reqDate.slice(0,10)}</td>
+      <td class="cell-name">${r.name}</td>
+      <td>${r.reason}</td>
+      <td style="text-align:left;font-size:11px;white-space:normal;">${fp.map(p=>p.name).join(', ')}</td>
+      <td>${labor?labor.toLocaleString()+'원':'-'}</td>
+      <td style="font-weight:700;color:#e65100;">${subtotal.toLocaleString()}원</td>
+      <td><span class="st st-${r.asStatus}">${r.asStatus}</span></td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+
+  h+=`<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:15px;font-weight:800;color:#c62828;">미정산 합계: ${totalAmt.toLocaleString()}원 (${unsettled.length}건)</div>
+    <button class="btn btn-orange" onclick="doShopSettle()">선택 건 정산 처리</button>
+  </div>`;
+  return h;
+}
+
+// ── 탭3: 정산 완료 ──
+function renderShopTabSettled(hist){
+  const settled=hist.filter(r=>{
+    if(r.wType!=='free')return false;
+    if(!r.settledDate)return false;
+    const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+    return fp.length>0;
+  });
+  if(!settled.length) return '<div style="color:#aaa;text-align:center;padding:30px;">해당 기간에 정산 완료 건이 없습니다.</div>';
+
+  let totalAmt=0;
+  let h='<table class="tbl" style="font-size:12px;"><thead><tr><th>AS번호</th><th>요청일</th><th>고객</th><th>부품 내역</th><th>공임비</th><th>정산 금액</th><th>정산일</th></tr></thead><tbody>';
+  settled.forEach(r=>{
+    const fp=r.selParts.filter(p=>!p.isPaid);
+    const partAmt=fp.reduce((s,p)=>s+p.price,0);
+    const labor=r.laborCost||0;
+    const subtotal=partAmt+labor;
+    totalAmt+=subtotal;
+    h+=`<tr>
+      <td>AS-${r.no}</td>
+      <td>${r.reqDate.slice(0,10)}</td>
+      <td class="cell-name">${r.name}</td>
+      <td style="text-align:left;font-size:11px;white-space:normal;">${fp.map(p=>p.name+'('+p.price.toLocaleString()+')').join(', ')}</td>
+      <td>${labor?labor.toLocaleString()+'원':'-'}</td>
+      <td style="font-weight:700;color:#2e7d32;">${subtotal.toLocaleString()}원</td>
+      <td style="color:#2e7d32;font-weight:600;">${r.settledDate||'-'}</td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  h+=`<div style="margin-top:12px;text-align:right;font-size:15px;font-weight:800;color:#2e7d32;">정산 완료 합계: ${totalAmt.toLocaleString()}원 (${settled.length}건)</div>`;
+  return h;
+}
+
+// 정산 처리 액션
+function toggleShopSettleAll(c){document.querySelectorAll('.shop-settle-chk').forEach(x=>x.checked=c.checked);}
+
+function doShopSettle(){
+  const checked=[];
+  document.querySelectorAll('.shop-settle-chk:checked').forEach(el=>{
+    const no=parseInt(el.getAttribute('data-no'));
+    const r=rows.find(x=>x.no===no);
+    if(r) checked.push(r);
+  });
+  if(!checked.length){toast('정산 처리할 건을 선택해주세요');return;}
+  const totalAmt=checked.reduce((s,r)=>{
+    const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+    return s+fp.reduce((ss,p)=>ss+p.price,0)+(r.laborCost||0);
+  },0);
+  cf('정산 처리',`${checked.length}건 / ${totalAmt.toLocaleString()}원을 정산 처리하시겠습니까?\n(협력점: ${shopHistName})`,()=>{
+    const today=new Date().toISOString().slice(0,10);
+    const time=nowStr();
+    checked.forEach(r=>{
+      r.settledDate=today;
+      r.memos.push({time:time,text:`[정산완료] ${shopHistName} 정산 처리. ${(r.selParts||[]).filter(p=>!p.isPaid).reduce((s,p)=>s+p.price,0).toLocaleString()}원`});
+    });
+    toast(checked.length+'건 정산 처리 완료');
+    saveAll();
+    renderShopHistModal();
+  });
+}
+
+// 배정 현황 카드
+function renderShopHistCards(hist){
+  let h='';
+  hist.forEach(r=>{
+    const isOpen=shopHistExpanded[r.no];
+    const parts=(r.selParts||[]).map(p=>p.name).join(', ')||'-';
+    const step=['요청','상담완료','협력점배정','유/무상확정','부품선택','완료'][getStep(r)]||'';
+
+    // 정산 상태 표시
+    let settleTag='';
+    if(r.wType==='free'){
+      const fp=(r.selParts||[]).filter(p=>!p.isPaid);
+      if(fp.length>0) settleTag=r.settledDate?'<span style="font-size:10px;color:#2e7d32;background:#e8f5e9;padding:1px 6px;border-radius:2px;">정산완료</span>':'<span style="font-size:10px;color:#c62828;background:#fce4ec;padding:1px 6px;border-radius:2px;">미정산</span>';
+    }
+
+    h+=`<div style="border:1px solid ${isOpen?'#e67e22':'#e0e0e0'};border-radius:6px;margin-bottom:8px;overflow:hidden;">`;
+    h+=`<div onclick="toggleShopHistRow(${r.no})" style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;background:${isOpen?'#fef8f0':'#fff'};">`;
+    h+=`<span class="st st-${r.asStatus}" style="font-size:11px;min-width:50px;text-align:center;">${r.asStatus}</span>`;
+    h+=`<div style="flex:1;min-width:0;">`;
+    h+=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="font-size:13px;">${r.name}</b><span style="font-size:11px;color:#888;">AS-${r.no}</span><span style="font-size:11px;color:#aaa;">${r.reqDate.slice(0,10)}</span>${settleTag}</div>`;
+    h+=`<div style="font-size:11px;color:#888;margin-top:2px;">${r.reason} | ${r.wType?(r.wType==='free'?'무상':'유상'):'미정'} | ${parts}</div>`;
+    h+=`</div>`;
+    h+=`<div style="text-align:right;min-width:70px;"><div style="font-size:14px;font-weight:700;color:#e65100;">${r.cost?r.cost.toLocaleString()+'원':'-'}</div><div style="font-size:10px;color:#aaa;">${step}</div></div>`;
+    h+=`<div style="color:#999;font-size:12px;">${isOpen?'▲':'▼'}</div>`;
+    h+=`</div>`;
+
+    if(isOpen){
+      h+=`<div style="border-top:1px solid #f0f0f0;padding:14px;background:#fafafa;">`;
+      // 고객정보
+      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;font-size:12px;">`;
+      h+=`<div><span style="color:#888;">연락처:</span> <b>${r.phone}</b></div>`;
+      h+=`<div><span style="color:#888;">접수제품:</span> ${r.product}</div>`;
+      h+=`<div><span style="color:#888;">담당자:</span> ${r.manager||'-'}</div>`;
+      h+=`<div><span style="color:#888;">처리결과:</span> ${r.result||'-'}</div>`;
+      h+=`</div>`;
+      // 부품
+      if(r.selParts&&r.selParts.length>0){
+        h+=`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:#777;margin-bottom:6px;">출고 부품</div>`;
+        r.selParts.forEach(p=>{
+          const tag=p.isPaid?'<span class="pw-paid">유상</span>':'<span class="pw-free">무상</span>';
+          h+=`<div style="display:flex;justify-content:space-between;padding:4px 8px;background:#fff;border:1px solid #eee;border-radius:3px;margin-bottom:3px;font-size:12px;"><span>${tag} ${p.name}</span><span style="font-weight:600;">${p.price.toLocaleString()}원</span></div>`;
+        });
+        h+=`</div>`;
+      }
+      // 정산 상태
+      if(r.wType==='free'&&(r.selParts||[]).some(p=>!p.isPaid)){
+        const fp=r.selParts.filter(p=>!p.isPaid);
+        const amt=fp.reduce((s,p)=>s+p.price,0)+(r.laborCost||0);
+        if(r.settledDate){
+          h+=`<div style="padding:8px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;font-size:12px;margin-bottom:12px;">✅ <b>${r.settledDate}</b>에 <b>${amt.toLocaleString()}원</b> 정산 완료</div>`;
+        } else {
+          h+=`<div style="padding:8px 12px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;font-size:12px;margin-bottom:12px;">⚠️ <b>${amt.toLocaleString()}원</b> 미정산</div>`;
+        }
+      }
+      // 조치이력
+      if(r.memos&&r.memos.length>0){
+        h+=`<div><div style="font-size:11px;font-weight:600;color:#777;margin-bottom:6px;">조치 이력</div><div style="max-height:150px;overflow-y:auto;">`;
+        r.memos.forEach(m=>{
+          h+=`<div style="display:flex;gap:8px;padding:5px 8px;border-left:2px solid #e67e22;background:#fff;margin-bottom:4px;font-size:12px;"><span style="color:#aaa;white-space:nowrap;font-size:11px;">${m.time}</span><span>${m.text}</span></div>`;
+        });
+        h+=`</div></div>`;
+      }
+      const rowIdx=rows.indexOf(r);
+      if(rowIdx>=0) h+=`<div style="margin-top:10px;text-align:right;"><button class="btn btn-sm btn-orange" onclick="closeShopHist();openDetail(${rowIdx})">AS관리 열기</button></div>`;
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  });
+  return h;
+}
+
+function toggleShopHistRow(no){
+  shopHistExpanded[no]=!shopHistExpanded[no];
+  const hist=getShopHist(shopHistName,shopHistDateFrom,shopHistDateTo);
+  const listEl=document.getElementById('shopHistList');
+  if(listEl) listEl.innerHTML=renderShopHistCards(hist);
+}
+
+function closeShopHist(){document.getElementById('shopHistModal').classList.remove('open');shopHistExpanded={};}
+
+// ===== REGISTER (신규 접수) =====
+const MANAGERS=['한호성','이동운','박나현','최규상','송재일','김수진','정다솜'];
+
+function openRegister(){
+  // 셀렉트 옵션 채우기
+  const prodSel=document.getElementById('regProduct');
+  prodSel.innerHTML='<option value="">-선택-</option>';
+  PRODUCTS.forEach(p=>prodSel.innerHTML+=`<option>${p}</option>`);
+
+  const reasonSel=document.getElementById('regReason');
+  reasonSel.innerHTML='<option value="">-선택-</option>';
+  REASONS.forEach(r=>reasonSel.innerHTML+=`<option>${r}</option>`);
+
+  const mgrSel=document.getElementById('regManager');
+  mgrSel.innerHTML='<option value="">-미배정-</option>';
+  MANAGERS.forEach(m=>mgrSel.innerHTML+=`<option>${m}</option>`);
+
+  // 폼 초기화
+  document.getElementById('regName').value='';
+  document.getElementById('regPhone').value='';
+  document.getElementById('regMemo').value='';
+  document.getElementById('regReentry').style.display='none';
+
+  document.getElementById('regModal').classList.add('open');
+  document.getElementById('regName').focus();
+}
+
+function closeRegister(){
+  document.getElementById('regModal').classList.remove('open');
+}
+
+function checkReentry(){
+  const phone=document.getElementById('regPhone').value.replace(/[^0-9]/g,'');
+  const box=document.getElementById('regReentry');
+  const info=document.getElementById('regReentryInfo');
+  if(phone.length<8){box.style.display='none';return;}
+
+  const prev=rows.filter(r=>r.phone.replace(/[^0-9]/g,'')===phone);
+  const openCases=prev.filter(r=>r.asStatus!=='완료');
+  if(prev.length>0){
+    box.style.display='block';
+    let h='';
+    if(openCases.length>0){
+      h+=`<div>이 번호로 <b>미완료 ${openCases.length}건</b>이 있습니다. 접수 시 <b style="color:#c62828;">재인입</b>으로 등록됩니다.</div>`;
+    } else {
+      h+=`<div style="color:#1565c0;">이 번호로 완료된 이력 <b>${prev.length}건</b>이 있습니다. <b>신규 접수</b>로 등록됩니다.</div>`;
+      box.style.background='#e3f2fd';box.style.borderColor='#90caf9';
+      box.querySelector('div').style.color='#1565c0';
+    }
+    h+='<div style="margin-top:8px;max-height:120px;overflow-y:auto;">';
+    prev.forEach(r=>{
+      h+=`<div style="padding:5px 8px;background:#fff;border:1px solid #f0f0f0;border-radius:3px;margin-bottom:3px;font-size:12px;display:flex;justify-content:space-between;">
+        <span><b>AS-${r.no}</b> ${r.reason}</span>
+        <span><span class="st st-${r.asStatus}" style="font-size:11px;">${r.asStatus}</span> ${r.reqDate.slice(0,10)}</span>
+      </div>`;
+    });
+    h+='</div>';
+    info.innerHTML=h;
+    // 고객명 자동 채우기
+    const nameInput=document.getElementById('regName');
+    if(!nameInput.value) nameInput.value=prev[0].name;
+  } else {
+    box.style.display='none';
+    box.style.background='#fce4ec';box.style.borderColor='#ef9a9a';
+  }
+}
+
+function submitRegister(){
+  const name=document.getElementById('regName').value.trim();
+  const phone=document.getElementById('regPhone').value.trim();
+  const product=document.getElementById('regProduct').value;
+  const reason=document.getElementById('regReason').value;
+  const manager=document.getElementById('regManager').value;
+  const memo=document.getElementById('regMemo').value.trim();
+
+  if(!name){toast('고객명을 입력해주세요');return;}
+  if(!phone){toast('연락처를 입력해주세요');return;}
+  if(!product){toast('접수제품을 선택해주세요');return;}
+  if(!reason){toast('인입사유를 선택해주세요');return;}
+
+  // 재인입 여부: 미완료 건이 있을 때만 재인입
+  const phoneClean=phone.replace(/[^0-9]/g,'');
+  const prev=rows.filter(r=>r.phone.replace(/[^0-9]/g,'')===phoneClean);
+  const openCases=prev.filter(r=>r.asStatus!=='완료');
+  const isReentry=openCases.length>0;
+
+  // 새 번호 생성
+  const maxNo=rows.reduce((m,r)=>Math.max(m,r.no),0);
+  const now=new Date();
+  const reqDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+  const memos=[];
+  if(memo) memos.push({time:nowStr(),text:memo});
+  if(isReentry) memos.push({time:nowStr(),text:`[재인입] 기존 ${prev.length}건 이력 있음. (최근: AS-${prev[0].no} ${prev[0].reason})`});
+
+  const newRow={
+    no:maxNo+1, reqDate:reqDate, name:name, phone:phone, product:product,
+    reason:reason, result:'', warranty:'', cost:0, manager:manager,
+    asStatus:isReentry?'재인입':'요청', memos:memos, partner:'', wType:'', wReason:'',
+    costs:{p:0,l:0,v:0,e:0}, selParts:[], partNote:'', payMethod:'', shipStatus:''
+  };
+
+  rows.unshift(newRow);
+  closeRegister();
+  goPage('as');
+  toast(`AS-${newRow.no} ${name} 접수 완료${isReentry?' (재인입)':''}`);
+}
+
+// ===== MODAL =====
+function getStep(r){
+  if(!r)return 0;
+  if(r.asStatus==='완료')return 5;
+  if((r.selParts||[]).length>0&&r.wType)return 4; // 부품선택 완료
+  if(r.wType)return 3; // 유/무상확정
+  if(r.partner)return 2; // 협력점배정
+  if((r.memos||[]).length>0&&r.asStatus!=='요청'&&r.asStatus!=='재인입')return 1;
+  return 0;
+}
+
+function openDetail(i){currentIdx=i;renderModal();document.getElementById('detailModal').classList.add('open');}
+function closeDetail(){document.getElementById('detailModal').classList.remove('open');currentIdx=null;saveAll();renderAS();renderShip();}
+
+function renderModal(){
+  const r=rows[currentIdx];const si=getStep(r);
+  document.getElementById('mTitle').textContent=`AS 관리 - No.${r.no} ${r.name}`;
+  let h='';
+  // Pipeline
+  h+='<div class="m-pipeline">'+STEPS.map((s,i)=>`<div class="m-pipe ${i<si?'done':i===si?'current':'pending'}">${s}</div>`).join('')+'</div>';
+  // Info
+  h+='<table class="m-info-table"><tbody>';
+  h+=`<tr><th>No.</th><td>${r.no}</td><th>고객명</th><td style="font-weight:600;">${r.name}</td></tr>`;
+  h+=`<tr><th>연락처</th><td>${r.phone}</td><th>인입사유</th><td>${r.reason}</td></tr>`;
+  h+=`<tr><th>접수제품</th><td colspan="3" style="font-size:12px;">${r.product}</td></tr>`;
+  if(r.partner)h+=`<tr><th>협력점</th><td><a style="color:#e67e22;cursor:pointer;font-weight:600;text-decoration:underline;" onclick="openShopHist('${r.partner.replace(/'/g,"\\'")}')">${r.partner}</a></td><th>유/무상</th><td>${r.wType?(r.wType==='free'?'<span class="w-무상">무상</span>':'<span class="w-유상">유상</span>'):'미정'}</td></tr>`;
+  h+='</tbody></table>';
+  // ===== 상담 단계: 메모 + 협력점 동시 표시 =====
+  if(si<=1){
+    // 상담 메모
+    h+='<div class="m-sec"><div class="m-sec-title">📝 상담 메모</div><div class="m-memo-list">';
+    if(!r.memos.length)h+='<div style="color:#bbb;font-size:13px;">메모가 없습니다.</div>';
+    else r.memos.forEach(m=>h+=`<div class="m-memo-item"><span class="m-memo-time">${m.time}</span>${m.text}</div>`);
+    h+='</div><div class="m-memo-input"><textarea id="memoIn" rows="1" placeholder="상담 메모 입력..."></textarea><button class="btn btn-sm btn-cancel" onclick="addMemo()">등록</button></div></div>';
+    // 협력점 배정 (같은 화면에)
+    h+=secShop(r);
+  } else {
+    // 상담 완료 이후에는 메모만 접혀서 표시
+    h+='<div class="m-sec"><div class="m-sec-title" style="margin-bottom:0;cursor:pointer;" onclick="document.getElementById(\'memoToggle\').style.display=document.getElementById(\'memoToggle\').style.display===\'none\'?\'block\':\'none\';">📝 상담 메모 <span style="font-size:11px;color:#aaa;font-weight:400;">('+r.memos.length+'건, 클릭하여 펼치기)</span></div>';
+    h+='<div id="memoToggle" style="display:none;margin-top:10px;"><div class="m-memo-list">';
+    r.memos.forEach(m=>h+=`<div class="m-memo-item"><span class="m-memo-time">${m.time}</span>${m.text}</div>`);
+    h+='</div><div class="m-memo-input"><textarea id="memoIn" rows="1" placeholder="메모 추가..."></textarea><button class="btn btn-sm btn-cancel" onclick="addMemo()">등록</button></div></div></div>';
+  }
+
+  // ===== 이후 단계 (상담+협력점 완료 후) =====
+  if(si===2&&!r.wType)h+=secWarranty(r);
+  if(si===3)h+=secParts(r); // 유/무상 확정 후 → 바로 부품 선택
+  if(si===4)h+=secPay(r); // 부품 선택 완료 → 결제/정산 처리
+  document.getElementById('mBody').innerHTML=h;
+
+  // Footer
+  let f='<button class="btn btn-cancel" onclick="closeDetail()">닫기</button>';
+  if(si<=1&&!r.partner){
+    f+='<button class="btn btn-cancel" style="border-color:#27ae60;color:#27ae60;" onclick="doConsultClose()">📞 상담종결</button>';
+    f+='<button class="btn btn-cancel" style="border-color:#e67e22;color:#e67e22;" onclick="doConsultParts()">📦 부품 발송</button>';
+    f+='<button class="btn btn-primary" onclick="doConsultAndShop()">🏭 협력점 배정</button>';
+  } else if(si<=1&&r.partner){
+    f+='<span style="font-size:12px;color:#27ae60;font-weight:600;margin-right:8px;">✓ 협력점 배정됨</span>';
+    f+='<button class="btn btn-primary" onclick="doAdvanceFromConsult()">다음 단계 →</button>';
+  } else if(si===2)f+='<button class="btn btn-primary" onclick="doWarranty()">📞 유/무상 확정</button>';
+  else if(si===3)f+='<button class="btn btn-primary" onclick="doSelectParts()">📦 부품 선택 완료</button>';
+  else if(si===4){
+    const hasPaid=r.selParts.some(p=>p.isPaid);
+    const hasFree=r.selParts.some(p=>!p.isPaid);
+    if(hasPaid)f+='<button class="btn btn-orange" onclick="doPartPaySystem()">💳 유상 → 결제요청</button>';
+    if(hasFree)f+='<button class="btn btn-primary" onclick="doPartFreeSettle()">🏭 무상 → 정산리스트</button>';
+    if(!hasPaid&&!hasFree)f+='<button class="btn btn-primary" onclick="doPartComplete()">✅ 처리 완료</button>';
+    if(hasPaid||hasFree)f+='<button class="btn btn-primary" onclick="doPartComplete()">✅ 처리 완료</button>';
+  }
+  document.getElementById('mFoot').innerHTML=f;
+}
+
+
+// Section renderers
+function secShop(r){
+  let h='<div class="m-sec"><div class="m-sec-title">🏭 협력점 배정</div>';
+  // 검색
+  h+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
+  h+=`<input id="shopSearch" placeholder="협력점명, 지역, 주소로 검색" value="${r._shopQ||''}" oninput="filterShops()" style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;">`;
+  h+='<select id="shopArea" onchange="filterShops()" style="padding:7px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;"><option value="">전체 지역</option>';
+  const areas=[...new Set(SHOPS.filter(s=>s.active!==false).map(s=>s.area))].sort();
+  areas.forEach(a=>h+=`<option value="${a}" ${r._shopArea===a?'selected':''}>${a}</option>`);
+  h+='</select></div>';
+  // 리스트
+  h+=`<div class="m-shop-list" id="shopListContainer" style="max-height:200px;overflow-y:auto;">`;
+  h+=renderShopItems(r._shopQ||'',r._shopArea||'',r._ts);
+  h+='</div>';
+  h+=`<div id="shopSelected" style="margin-top:8px;padding:8px 10px;background:#fef8f0;border:1px solid #f0c27a;border-radius:3px;font-size:12px;${r._ts?'':'display:none;'}">${r._ts?'선택: <b style="color:#e65100;">'+r._ts+'</b>':''}</div>`;
+  h+='</div>';
+  return h;
+}
+
+function renderShopItems(query,area,selected){
+  let h='';
+  let filtered=SHOPS.filter(s=>s.active!==false);
+  if(query)filtered=filtered.filter(s=>s.name.includes(query)||s.addr.includes(query)||s.area.includes(query));
+  if(area)filtered=filtered.filter(s=>s.area===area);
+  if(filtered.length===0)return '<div style="padding:12px;color:#aaa;font-size:12px;text-align:center;">검색 결과가 없습니다.</div>';
+  filtered.forEach(s=>{
+    const idx=SHOPS.indexOf(s);
+    h+=`<div class="m-shop ${selected===s.name?'selected':''}" onclick="pickShop(${idx})">
+      <input type="radio" name="shop" ${selected===s.name?'checked':''} style="width:16px;height:16px;">
+      <div><div class="m-shop-name">${s.name}</div><div class="m-shop-addr">${s.addr} | ${s.tel}</div></div>
+      <div style="margin-left:auto;font-size:11px;color:#e67e22;font-weight:600;background:#fff3e0;padding:2px 8px;border-radius:3px;">${s.area}</div>
+    </div>`;
+  });
+  return h;
+}
+
+function filterShops(){
+  const r=rows[currentIdx];
+  const q=document.getElementById('shopSearch')?.value||'';
+  const area=document.getElementById('shopArea')?.value||'';
+  r._shopQ=q;r._shopArea=area;
+  const container=document.getElementById('shopListContainer');
+  if(container)container.innerHTML=renderShopItems(q,area,r._ts);
+}
+function secWarranty(r){
+  let h='<div class="m-sec"><div class="m-sec-title">📞 유/무상 최종 결정</div><div class="m-w-group">';
+  h+=`<div class="m-w-opt ${r._tw==='free'?'sel-free':''}" onclick="pickW('free')"><input type="radio" name="wt" ${r._tw==='free'?'checked':''}><div><div class="m-w-label">무상 수리</div><div class="m-w-desc">보증기간 내 / 제품 결함</div></div></div>`;
+  h+=`<div class="m-w-opt ${r._tw==='paid'?'sel-paid':''}" onclick="pickW('paid')"><input type="radio" name="wt" ${r._tw==='paid'?'checked':''}><div><div class="m-w-label">유상 수리</div><div class="m-w-desc">보증 만료 / 사용자 과실</div></div></div></div>`;
+  h+=`<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;color:#777;">판단 사유</label><textarea id="wReasonIn" rows="2" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;resize:none;outline:none;margin-top:3px;" placeholder="예: 구매 1년 경과, 소모품 유상 처리">${r.wReason||''}</textarea></div>`;
+  h+='<div class="m-notice m-notice-warn">⚠️ 고객 통화 확인 후 최종 결정해주세요.</div></div>';return h;
+}
+function secCost(r){
+  const isFree=r.wType==='free';
+  let h='<div class="m-sec"><div class="m-sec-title">💰 정산 처리</div>';
+  if(isFree)h+=`<div class="settle-target target-partner"><div class="settle-icon">🏭</div><div class="settle-info"><div class="settle-label">정산 대상</div><strong>협력점 정산</strong> — 무상 수리 건이므로 <b>${r.partner}</b>에 당사가 비용을 정산합니다.</div></div>`;
+  else h+=`<div class="settle-target target-customer"><div class="settle-icon">👤</div><div class="settle-info"><div class="settle-label">정산 대상</div><strong>고객 정산</strong> — 유상 수리 건이므로 고객 <b>${r.name}</b>님에게 비용을 청구합니다.</div></div>`;
+  h+='<div class="m-cost-grid">';
+  h+=`<div class="m-cost-group"><label>부품비</label><input id="cP" type="number" value="${r.costs.p||''}" placeholder="0" oninput="liveCalc()"></div>`;
+  h+=`<div class="m-cost-group"><label>공임비</label><input id="cL" type="number" value="${r.costs.l||''}" placeholder="0" oninput="liveCalc()"></div>`;
+  h+=`<div class="m-cost-group"><label>출장비</label><input id="cV" type="number" value="${r.costs.v||''}" placeholder="0" oninput="liveCalc()"></div>`;
+  h+=`<div class="m-cost-group"><label>기타</label><input id="cE" type="number" value="${r.costs.e||''}" placeholder="0" oninput="liveCalc()"></div></div>`;
+  const t=(r.costs.p||0)+(r.costs.l||0)+(r.costs.v||0)+(r.costs.e||0);
+  h+=`<div class="m-cost-total"><span class="tl">${isFree?'협력점 정산 합계':'고객 청구 합계'}</span><span class="tv" id="costDisp">${t.toLocaleString()}원</span></div>`;
+
+  // 유상일 때 카드정보 + 바로 결제요청
+  if(!isFree){
+    h+='<div style="margin-top:14px;border-top:1px solid #eee;padding-top:12px;">';
+    h+='<div style="font-size:13px;font-weight:600;color:#e65100;margin-bottom:8px;">💳 고객 결제정보 (상담 시 수집)</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;">';
+    h+=`<div class="m-cost-group"><label>카드사</label><select id="cCard" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;">
+      <option value="">-선택-</option><option ${r.cardInfo==='국민'?'selected':''}>국민</option><option ${r.cardInfo==='신한'?'selected':''}>신한</option><option ${r.cardInfo==='삼성'?'selected':''}>삼성</option><option ${r.cardInfo==='현대'?'selected':''}>현대</option><option ${r.cardInfo==='롯데'?'selected':''}>롯데</option><option ${r.cardInfo==='하나'?'selected':''}>하나</option><option ${r.cardInfo==='우리'?'selected':''}>우리</option><option ${r.cardInfo==='BC'?'selected':''}>BC</option>
+    </select></div>`;
+    h+=`<div class="m-cost-group"><label>카드번호</label><input id="cCardNo" value="${r.cardNo||''}" placeholder="0000-0000-0000-0000"></div>`;
+    h+=`<div class="m-cost-group"><label>유효기간</label><input id="cCardExp" value="${r.cardExp||''}" placeholder="MM/YY"></div>`;
+    h+='</div>';
+    h+='<div class="m-notice m-notice-info" style="margin-top:6px;">ℹ️ 정산 완료 시 자동으로 결제팀에 결제요청됩니다.</div>';
+    h+='</div>';
+  }
+
+  h+='</div>';return h;
+}
+function secParts(r){
+  let h='<div class="m-sec"><div class="m-sec-title">📦 출고 부품 선택</div><div class="m-parts-grid">';
+  PARTS_LIST.forEach((p,i)=>{const sel=r.selParts.some(sp=>sp.name===p.name);h+=`<div class="m-part ${sel?'selected':''}" onclick="pickPart(${i})"><input type="checkbox" ${sel?'checked':''} style="pointer-events:none;width:15px;height:15px;"><div>${p.name}<br><span class="m-part-price">${p.price.toLocaleString()}원</span></div></div>`;});
+  h+='</div>';const tot=r.selParts.reduce((s,p)=>s+p.price,0);
+  h+=`<div style="margin-top:8px;font-size:13px;color:#777;">선택: <b id="pCnt">${r.selParts.length}</b>개 | 합계: <b id="pTot">${tot.toLocaleString()}원</b></div>`;
+
+  // 선택된 부품별 유/무상 체크
+  h+='<div id="partWarrantyWrap">'+renderPartWarrantyList(r)+'</div>';
+
+  // 공임비
+  h+='<div style="margin-top:14px;border-top:1px solid #eee;padding-top:12px;display:flex;gap:10px;align-items:flex-end;">';
+  h+=`<div style="flex:1;"><label style="font-size:12px;font-weight:600;color:#777;">공임비</label><input id="pLabor" type="number" value="${r.laborCost||''}" placeholder="0" oninput="updatePartTotals()" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;margin-top:3px;"></div>`;
+  h+=`<div style="flex:2;"><label style="font-size:12px;font-weight:600;color:#777;">출고 메모</label><input id="pNote" value="${r.partNote||''}" placeholder="예: 협력점 직배송" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:inherit;outline:none;margin-top:3px;"></div>`;
+  h+='</div></div>';return h;
+}
+function secPay(r){
+  const freeParts=r.selParts.filter(p=>!p.isPaid);
+  const paidParts=r.selParts.filter(p=>p.isPaid);
+  const freeTot=freeParts.reduce((s,p)=>s+p.price,0);
+  const paidTot=paidParts.reduce((s,p)=>s+p.price,0);
+
+  let h='<div class="m-sec"><div class="m-sec-title">💳 부품 결제 처리</div>';
+
+  // 무상 부품
+  if(freeParts.length>0){
+    h+=`<div style="margin-bottom:14px;padding:12px 14px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;">
+      <div style="font-size:13px;font-weight:600;color:#1565c0;margin-bottom:6px;">🏭 무상 부품 (회사 부담 → 정산 리스트)</div>`;
+    freeParts.forEach(p=>h+=`<div style="font-size:12px;display:flex;justify-content:space-between;padding:2px 0;"><span>${p.name}</span><span>${p.price.toLocaleString()}원</span></div>`);
+    h+=`<div style="border-top:1px solid #90caf9;margin-top:6px;padding-top:6px;font-weight:700;display:flex;justify-content:space-between;"><span>소계</span><span>${freeTot.toLocaleString()}원</span></div>`;
+    h+=`<div style="font-size:11px;color:#1565c0;margin-top:4px;">→ 정산 탭에서 결제서류에 포함됩니다.</div></div>`;
+  }
+
+  // 유상 부품
+  if(paidParts.length>0){
+    h+=`<div style="margin-bottom:14px;padding:12px 14px;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;">
+      <div style="font-size:13px;font-weight:600;color:#e65100;margin-bottom:6px;">👤 유상 부품 (고객 부담 → AS결제 창)</div>`;
+    paidParts.forEach(p=>h+=`<div style="font-size:12px;display:flex;justify-content:space-between;padding:2px 0;"><span>${p.name}</span><span>${p.price.toLocaleString()}원</span></div>`);
+    h+=`<div style="border-top:1px solid #ffcc80;margin-top:6px;padding-top:6px;font-weight:700;display:flex;justify-content:space-between;"><span>소계</span><span>${paidTot.toLocaleString()}원</span></div>`;
+    h+=`<div style="font-size:11px;color:#e65100;margin-top:4px;">→ AS결제 창으로 넘겨 고객 결제를 진행합니다.</div></div>`;
+  }
+
+  h+='</div>';
+  return h;
+}
+
+// ===== INTERACTIONS =====
+function addMemo(){const r=rows[currentIdx];const t=document.getElementById('memoIn').value.trim();if(!t)return;r.memos.push({time:nowStr(),text:t});if(r.asStatus==='요청')r.asStatus='처리중';toast('메모 등록');renderModal();}
+function pickShop(i){
+  const r=rows[currentIdx];
+  r._ts=SHOPS[i].name;
+  // 리스트만 다시 그림
+  const container=document.getElementById('shopListContainer');
+  if(container)container.innerHTML=renderShopItems(r._shopQ||'',r._shopArea||'',r._ts);
+  const sel=document.getElementById('shopSelected');
+  if(sel){sel.innerHTML='선택: <b style="color:#e65100;">'+r._ts+'</b>';sel.style.display='block';}
+}
+function pickW(type){rows[currentIdx]._tw=type;document.querySelectorAll('.m-w-opt').forEach(o=>o.classList.remove('sel-free','sel-paid'));document.querySelectorAll('.m-w-opt').forEach(o=>{if((type==='free'&&o.textContent.includes('무상'))||(type==='paid'&&o.textContent.includes('유상'))){o.classList.add(type==='free'?'sel-free':'sel-paid');o.querySelector('input').checked=true;}});}
+function pickPart(i){
+  const r=rows[currentIdx];const p=PARTS_LIST[i];
+  const idx=r.selParts.findIndex(sp=>sp.name===p.name);
+  if(idx>=0)r.selParts.splice(idx,1);else r.selParts.push({name:p.name,price:p.price,isPaid:false});
+  // 칩 토글만
+  const chips=document.querySelectorAll('.m-part');
+  if(chips[i]){chips[i].classList.toggle('selected');const cb=chips[i].querySelector('input');if(cb)cb.checked=!cb.checked;}
+  // 합계
+  const tot=r.selParts.reduce((s,sp)=>s+sp.price,0);
+  const cntEl=document.getElementById('pCnt');const totEl=document.getElementById('pTot');
+  if(cntEl)cntEl.textContent=r.selParts.length;
+  if(totEl)totEl.textContent=tot.toLocaleString()+'원';
+  // 유/무상 구분 영역 갱신
+  const wrapEl=document.getElementById('partWarrantyWrap');
+  if(wrapEl)wrapEl.innerHTML=renderPartWarrantyList(r);
+}
+function renderPartWarrantyList(r){
+  if(!r.selParts.length)return '';
+  let h='<div style="margin-top:14px;border-top:1px solid #eee;padding-top:12px;"><div style="font-size:12px;font-weight:600;color:#777;margin-bottom:8px;">부품별 유/무상 구분</div>';
+  h+='<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+  r.selParts.forEach((sp,i)=>{
+    const isFree=!sp.isPaid;
+    h+=`<tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:6px 0;font-weight:500;">${sp.name}</td>
+      <td style="padding:6px 0;text-align:right;width:80px;">${sp.price.toLocaleString()}원</td>
+      <td style="padding:6px 8px;width:180px;text-align:right;">
+        <label style="cursor:pointer;margin-right:10px;"><input type="radio" name="pw${i}" ${isFree?'checked':''} onchange="setPartWarranty(${i},false)" style="margin-right:3px;">무상(회사)</label>
+        <label style="cursor:pointer;"><input type="radio" name="pw${i}" ${!isFree?'checked':''} onchange="setPartWarranty(${i},true)" style="margin-right:3px;">유상(고객)</label>
+      </td>
+    </tr>`;
+  });
+  h+='</table>';
+  const freeTot=r.selParts.filter(p=>!p.isPaid).reduce((s,p)=>s+p.price,0);
+  const paidTot=r.selParts.filter(p=>p.isPaid).reduce((s,p)=>s+p.price,0);
+  h+=`<div style="display:flex;gap:12px;margin-top:8px;font-size:12px;">
+    <span style="color:#1565c0;">무상(회사 부담): <b id="partFreeTot">${freeTot.toLocaleString()}원</b></span>
+    <span style="color:#e65100;">유상(고객 청구): <b id="partPaidTot">${paidTot.toLocaleString()}원</b></span>
+  </div></div>`;
+  return h;
+}
+function setPartWarranty(partIdx,isPaid){const r=rows[currentIdx];if(r.selParts[partIdx])r.selParts[partIdx].isPaid=isPaid;updatePartTotals();}
+function updatePartTotals(){const r=rows[currentIdx];const freeTot=r.selParts.filter(p=>!p.isPaid).reduce((s,p)=>s+p.price,0);const paidTot=r.selParts.filter(p=>p.isPaid).reduce((s,p)=>s+p.price,0);const fe=document.getElementById('partFreeTot');const pe=document.getElementById('partPaidTot');if(fe)fe.textContent=freeTot.toLocaleString()+'원';if(pe)pe.textContent=paidTot.toLocaleString()+'원';}
+function liveCalc(){const p=parseInt(document.getElementById('cP')?.value)||0;const l=parseInt(document.getElementById('cL')?.value)||0;const v=parseInt(document.getElementById('cV')?.value)||0;const e=parseInt(document.getElementById('cE')?.value)||0;const el=document.getElementById('costDisp');if(el)el.textContent=(p+l+v+e).toLocaleString()+'원';}
+
+// ===== ACTIONS =====
+function doConsultClose(){
+  const r=rows[currentIdx];
+  cf('상담종결',`전화 상담으로 해결된 건으로 종결하시겠습니까?`,()=>{
+    r.asStatus='완료';
+    r.result='전화해결';
+    r.memos.push({time:nowStr(),text:'[상담종결] 전화 상담으로 해결. AS 종결.'});
+    toast('상담종결 — AS 완료');
+    closeDetail();
+  });
+}
+function doConsultParts(){
+  const r=rows[currentIdx];
+  cf('부품 발송',`협력점 없이 부품 발송으로 진행하시겠습니까?\n부품 선택 화면으로 이동합니다.`,()=>{
+    r.partner='(부품 직발송)';
+    if(r.asStatus==='요청')r.asStatus='처리중';
+    r.memos.push({time:nowStr(),text:'협력점 미배정. 부품 직발송으로 진행.'});
+    toast('부품 선택으로 이동');
+    renderModal();
+  });
+}
+function doConsultAndShop(){
+  const r=rows[currentIdx];
+  if(!r._ts){toast('협력점을 선택해주세요');return;}
+  cf('협력점 배정',`"${r._ts}"에 배정하시겠습니까?`,()=>{
+    r.partner=r._ts;delete r._ts;
+    if(r.asStatus==='요청')r.asStatus='처리중';
+    r.memos.push({time:nowStr(),text:`${r.partner} 배정.`});
+    toast('협력점 배정 완료');
+    renderModal();
+  });
+}
+function doAdvanceFromConsult(){
+  const r=rows[currentIdx];
+  if(r.asStatus==='요청')r.asStatus='처리중';
+  renderModal();
+}
+function doWarranty(){const r=rows[currentIdx];if(!r._tw){toast('유상/무상을 선택해주세요');return;}const lb=r._tw==='free'?'무상':'유상';cf('유/무상 확정',`${lb} 수리로 확정하시겠습니까?`,()=>{r.wType=r._tw;r.warranty=lb;delete r._tw;r.wReason=document.getElementById('wReasonIn')?.value||'';r.memos.push({time:nowStr(),text:`${lb} 수리 확정. ${r.wReason?'사유: '+r.wReason:''}`});toast(lb+' 수리 확정');renderModal();});}
+function doSettle(){const r=rows[currentIdx];const p=parseInt(document.getElementById('cP')?.value)||0;const l=parseInt(document.getElementById('cL')?.value)||0;const v=parseInt(document.getElementById('cV')?.value)||0;const e=parseInt(document.getElementById('cE')?.value)||0;const t=p+l+v+e;const isFree=r.wType==='free';const target=isFree?`협력점(${r.partner})`:`고객(${r.name})`;
+  // 유상일 때 카드정보 저장
+  if(!isFree){
+    r.cardInfo=document.getElementById('cCard')?.value||'';
+    r.cardNo=document.getElementById('cCardNo')?.value||'';
+    r.cardExp=document.getElementById('cCardExp')?.value||'';
+  }
+  cf('정산 완료',`${target}에 ${t.toLocaleString()}원 정산${!isFree?' + 결제요청':''}하시겠습니까?`,()=>{
+    r.costs={p,l,v,e};r.cost=t;r.result=isFree?'무상정비':'일반정비(유상)';
+    r.memos.push({time:nowStr(),text:`${isFree?'[협력점 정산]':'[고객 청구]'} ${target} / 합계 ${t.toLocaleString()}원`});
+    // 유상이면 자동 결제요청
+    if(!isFree&&t>0){
+      r.payStatus='결제요청';
+      payData.push({
+        id:payData.length+1, asNo:r.no, name:r.name, phone:r.phone,
+        payMethod:r.cardInfo?'카드':'무통장', product:'AS수리-'+r.reason,
+        type:'렌탈', amount:t, discount:0, coupon:0, card:r.cardInfo||'', cardNo:r.cardNo||'', cardExp:r.cardExp||'',
+        cardStatus:'', approvalNo:'', memo:'유상수리', status:'대기'
+      });
+      r.memos.push({time:nowStr(),text:`[결제요청] 수리비 ${t.toLocaleString()}원 결제팀 자동요청${r.cardInfo?' ('+r.cardInfo+' / '+r.cardNo+')':''}`});
+      toast('정산 완료 + 결제요청됨');
+    } else {
+      toast('정산 완료');
+    }
+    renderModal();
+  });
+}
+function doSelectParts(){
+  const r=rows[currentIdx];
+  if(!r.selParts.length){toast('부품을 1개 이상 선택해주세요');return;}
+  r.partNote=document.getElementById('pNote')?.value||'';
+  r.laborCost=parseInt(document.getElementById('pLabor')?.value)||0;
+  const partTot=r.selParts.reduce((s,p)=>s+p.price,0);
+  const tot=partTot+r.laborCost;
+  cf('부품 선택 완료',`${r.selParts.length}개 부품 (${partTot.toLocaleString()}원)${r.laborCost?' + 공임비 '+r.laborCost.toLocaleString()+'원':''} 확정하시겠습니까?`,()=>{
+    r.shipStatus='출고대기';
+    r.cost=tot;
+    r.memos.push({time:nowStr(),text:`부품 선택: ${r.selParts.map(p=>p.name+(p.isPaid?' (유상)':' (무상)')).join(', ')}${r.laborCost?' / 공임비 '+r.laborCost.toLocaleString()+'원':''} / 합계 ${tot.toLocaleString()}원`});
+    toast('부품 선택 완료');
+    renderModal();
+  });
+}
+function doPartFreeSettle(){
+  const r=rows[currentIdx];
+  const freeParts=r.selParts.filter(p=>!p.isPaid);
+  const freeTot=freeParts.reduce((s,p)=>s+p.price,0);
+  cf('무상 정산 리스트 등록',`무상 부품 ${freeTot.toLocaleString()}원을 정산 리스트에 등록하시겠습니까?`,()=>{
+    r.memos.push({time:nowStr(),text:`[무상정산] ${freeParts.map(p=>p.name).join(', ')} / ${freeTot.toLocaleString()}원 정산리스트 등록`});
+    toast('무상 정산 리스트 등록 완료');
+    renderModal();
+  });
+}
+function doPartOut(){const r=rows[currentIdx];if(!r.selParts.length){toast('출고 부품을 선택해주세요');return;}const t=r.selParts.reduce((s,p)=>s+p.price,0);r.partNote=document.getElementById('pNote')?.value||'';cf('부품 출고',`${r.selParts.length}개 부품 (${t.toLocaleString()}원) 출고하시겠습니까?`,()=>{r.shipStatus='출고대기';r.memos.push({time:nowStr(),text:`부품 출고: ${r.selParts.map(p=>p.name).join(', ')} (${t.toLocaleString()}원)`});toast('부품 출고 → 출고 물품 페이지에서 확인');renderModal();});}
+function doPartPaySystem(){
+  const r=rows[currentIdx];
+  const paidParts=r.selParts.filter(p=>p.isPaid);
+  const paidTot=paidParts.reduce((s,p)=>s+p.price,0);
+  cf('부품 결제요청',`유상 부품 ${paidTot.toLocaleString()}원을 결제팀에 요청하시겠습니까?`,()=>{
+    r.partPayStatus='결제요청';
+    const exists=payData.find(p=>p.asNo===r.no&&p.memo==='유상부품');
+    if(!exists){
+      payData.push({
+        id:payData.length+1, asNo:r.no, name:r.name, phone:r.phone,
+        payMethod:r.cardInfo?'카드':'카드', product:'AS부품-'+paidParts.map(p=>p.name).join(','),
+        type:'렌탈', amount:paidTot, discount:0, coupon:0, card:r.cardInfo||'', cardNo:r.cardNo||'',
+        cardStatus:'', approvalNo:'', memo:'유상부품', status:'대기'
+      });
+    }
+    r.memos.push({time:nowStr(),text:`[결제요청] 유상부품 ${paidTot.toLocaleString()}원 결제팀 요청`});
+    toast('부품 결제요청 완료');
+    renderModal();
+  });
+}
+function doPartComplete(){
+  const r=rows[currentIdx];
+  const freeParts=r.selParts.filter(p=>!p.isPaid);
+  const freeTot=freeParts.reduce((s,p)=>s+p.price,0);
+  cf('처리 완료',`이 AS 건을 완료 처리하시겠습니까?${freeTot>0?'\n무상 부품 '+freeTot.toLocaleString()+'원은 정산 리스트에 추가됩니다.':''}`,()=>{
+    r.asStatus='완료';r.shipStatus='출고완료';
+    let memo='AS 처리 완료.';
+    if(freeParts.length)memo+=` 무상 부품(${freeTot.toLocaleString()}원) → 정산 리스트.`;
+    r.memos.push({time:nowStr(),text:memo});
+    toast('AS 처리 완료');
+    closeDetail();
+  });
+}
+
+// ===== UTILS =====
+function nowStr(){const d=new Date();return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function toast(m){const t=document.getElementById('toast');t.textContent='✔ '+m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function cf(title,text,ok){document.getElementById('cfTitle').textContent=title;document.getElementById('cfText').textContent=text;document.getElementById('confirmOverlay').classList.add('open');document.getElementById('cfOk').onclick=()=>{closeCf();ok();};}
+function closeCf(){document.getElementById('confirmOverlay').classList.remove('open');}
+
+// ===== AUTO-SAVE: 주요 함수 래핑 =====
+const _origToast = toast;
+toast = function(m){ _origToast(m); saveAll(); };
+
+// Init
+loadAll();
+if(SHOPS.length===0){
+  fetch(DEFAULT_SHOPS_URL).then(r=>r.json()).then(data=>{
+    if(data&&data.length){SHOPS=data;saveAll();}
+    renderAS();populateReasonFilter();
+  }).catch(()=>{
+    // fetch 실패 시 기본 데이터
+    if(SHOPS.length===0) SHOPS=[
+      {name:'바이크플러스 강남점',addr:'서울 강남구 역삼로 123',tel:'02-1234-5678',area:'서울',active:true},
+      {name:'페달공방 서초점',addr:'서울 서초구 서초대로 456',tel:'02-2345-6789',area:'서울',active:true},
+      {name:'라이드케어 송파점',addr:'서울 송파구 올림픽로 789',tel:'02-3456-7890',area:'서울',active:true},
+    ];
+    renderAS();populateReasonFilter();
+  });
+} else {
+  renderAS();populateReasonFilter();
+}
+</script>
+</body>
+</html>
